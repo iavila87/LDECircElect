@@ -1,0 +1,8 @@
+*.tex
+*.pdf
+*.hi
+*.o
+*.exe
+*.aux
+*.log
+*.txt
