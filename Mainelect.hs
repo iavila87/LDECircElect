@@ -19,10 +19,10 @@ run :: [Char] -> IO ()
 run ifile =
     do
         s <- readFile ifile
-        s1<- case parseComm ifile s of
+        case parseComm ifile s of
                                 Left error -> print error
                                 --Right t    -> print (eval t) --imprimir el resultado de evaluar.
-                                Right t    -> (writeFile "testdecreacion.tex" (snd (eval t) ))
+                                Right t    -> (writeFile "circuit.tex" (snd (eval t) ))
         
         -- s <- shortLinesOnly "pruebalatex.tex"
         -- putStrLn "Leyendo...creando archivo"
@@ -34,8 +34,8 @@ run ifile =
         -- writeFile "testdecreacion.tex" (snd ( evalComm (CircExpr (Serie (CompExpr (Source (Const 12))) (CompExpr (Switch BFalse)) )) initState ) )
         putStrLn $ "se creo el documento."
         -- ejecuta un comando de sistema
-        system "pdflatex testdecreacion.tex" >>= \exitCode -> print exitCode
-        system "testdecreacion.pdf" >>= \exitCode -> print exitCode
+        system "pdflatex circuit.tex" >>= \exitCode -> print exitCode
+        system "circuit.pdf" >>= \exitCode -> print exitCode
 
 
 
