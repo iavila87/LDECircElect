@@ -117,7 +117,7 @@ evalComm' c s = case c of
                                           str4 = strLine (strCoord xIni (yFinEvalC1-2)) (strCoord (xFinEvalC1-2) (yFinEvalC1-2))
                                           -- Linea horizontal en la linea de c1
                                           str5 = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC2 yIni)
-                                          --
+                                          -- 
                                           str7a = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC1 yFinEvalC2)
                                           str7b = strLine (strCoord xFinEvalC2 yFinEvalC2) (strCoord xFinEvalC2 yFinEvalC1)
                                           --
