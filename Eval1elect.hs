@@ -11,18 +11,14 @@ type State = ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estad
 
 
 
--- Estado nulo
+-- Estado inicial
 initState :: State
 initState = let s  = update "coordX" 0 ([],initStateCirc)
                 s' = update "coordY" 0 s
             in s'
 
---initState = []
 
-
-
------- Cambia el valor de una variable en un estado
--- :( Completar la definicion ???
+-- Cambia el valor de una variable en un estado
 updateCirc :: String -> State -> State
 updateCirc txt (s,"") = (s,txt)
 updateCirc txt (s,scirc) = (s,scirc ++ txt)
@@ -37,15 +33,10 @@ lookfor :: NVar -> State -> Integer
 lookfor var (((x,y):xs, sc))= if var == x then y
                                           else lookfor var (xs,sc)
 
---lookfor var ((x,y):xs)= if var == x then y
---                                    else lookfor var xs
 
 -- Cambia el valor de una variable en un estado
 -- Completar la definicion
 update :: NVar -> Integer -> State -> State
--- update var valor [] = [(var,valor)]
---update var valor ((x,y):xs) = if var == x then (var,valor):xs
---                                          else (x,y): update var valor xs
 update var valor ([],sc) = ([(var,valor)],sc)
 update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
                                           else ((x,y): fst (update var valor (xs,sc)),sc)
@@ -89,8 +80,8 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               -- Actualizo y cierro la seccion de circuito de LATEX
                           in updateCirc (str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ endDoc) s2
 
---
--- evalComm' (Serie (CompExpr c1) c2) s = case
+
+evalComm' :: Circ -> State -> ([Char], State)
 evalComm' c s = case c of
                     Serie c1 c2 -> let (str1,s1) = (evalComm' c1 s)
                                        (str2,s2) = (evalComm' c2 s1)
@@ -165,14 +156,17 @@ evalComm' c s = case c of
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
 
 -- Funcion que devuelve el mayor
+isX1Mayor :: Ord a => a -> a -> Bool
 isX1Mayor n m = if n < m then False else True
 --
+cnv :: Show a => a -> String
 cnv n = show n
 
 --
+strCoord :: (Show a1, Show a2) => a1 -> a2 -> [Char]
 strCoord x y = " ("++ (cnv x) ++","++ (cnv y) ++") "
 
--- strComp
+strComp :: Circ -> [Char]
 strComp (CompExpr (Resistance (Const r))) = ("to[R={" ++ (show r) ++ "}{ ohm},-]")
 
 strComp (CompExpr (Capacitance (Const c))) = ("to[C={" ++ (show c) ++ "}{ uF},-]")
@@ -189,8 +183,7 @@ strComp (CompExpr (Switch BFalse)) = "to[cosw, l=1, -, name=s1]"
 
 strComp (CompExpr (Source (Const r))) = "to[battery1={" ++ (show r) ++ "}{V}]"
 
--- PRIMERO HACER LAS REGLAS
--- evalComm (CircExpr ci) s  
+  
 -- Evalua una expresion entera
 -- Completar definicion
 evalIntExp :: IntExp -> State -> Integer
@@ -241,6 +234,7 @@ evalBoolExp (Not exp1) estado = not (evalBoolExp exp1 estado)
 
 
 -- Calculo de la resistencia total del circuito.
+resTotal :: Circ -> Integer
 resTotal circ = if (findCap circ) then -1
                 else resTotal' circ
 
@@ -252,6 +246,7 @@ resTotal' circ = case circ of
                          Parallel c1 c2     -> ((resTotal' c1) * (resTotal' c2)) `div` ((resTotal' c1) + (resTotal' c2))
                          
 -- Calculo de la capacidad total del circuito.
+capTotal :: Circ -> Integer
 capTotal circ = if (findCap circ) then capTotal' circ
                 else -1
 
@@ -268,6 +263,7 @@ isCapacitor c = case c of
                     CompExpr x -> False
                         
 -- Busca si hay un capacitor en el circuito
+findCap :: Circ -> Bool
 findCap c = case c of 
                     CompExpr (Capacitance x) -> True
                     CompExpr x -> False
@@ -275,5 +271,6 @@ findCap c = case c of
                     Parallel c1 c2 -> (findCap c1) || (findCap c2)
 
 -- Calculo de la intensidad total del circuito.
-ampTotal amp v c = v `div` (resTotal c)
+ampTotal :: Integer -> Circ -> Integer
+ampTotal v c = v `div` (resTotal c)
 

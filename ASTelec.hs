@@ -11,7 +11,7 @@ data IntExp = Const Integer
             | Minus IntExp IntExp
             | Times IntExp IntExp
             | Div IntExp IntExp
-deriving (Show,Eq)
+ deriving (Show,Eq)
 
 -- Expresiones Booleanas
 data BoolExp = BTrue
@@ -22,7 +22,7 @@ data BoolExp = BTrue
              | And BoolExp BoolExp
              | Or BoolExp BoolExp
              | Not BoolExp
-deriving (Show,Eq)
+ deriving (Show,Eq)
 
 -- Comandos (sentencias)
 -- Observar que solo se permiten variables de un tipo (entero)
@@ -32,13 +32,13 @@ data Comm = Skip
           | Cond BoolExp Comm Comm
           | Repeat Comm BoolExp
           | CircExpr Circ
-deriving (Show,Eq)
+ deriving (Show,Eq)
 
 -- Expresiones Electronicas
 data Circ = Serie Circ Circ
           | Parallel Circ Circ
           | CompExpr Comp 
-deriving (Show,Eq)
+ deriving (Show,Eq)
 
 data Comp = Resistance IntExp
           | Capacitance IntExp
@@ -47,7 +47,7 @@ data Comp = Resistance IntExp
           | Voltmeter   -- Multimetro --
           | Amperemeter ----------------
           | Ohmmeter    ----------------
-deriving (Show, Eq)
+ deriving (Show, Eq)
 
 
 

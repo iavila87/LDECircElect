@@ -141,7 +141,7 @@ circexpr = try (do reserved lis "serie"
                        char ')'
                        return (Parallel c1 c2))
            <|> try (do c <- comp
-                       return (CompExpr c))            -- co <- compexpr
+                       return (CompExpr c))
                        
 comp :: Parser Comp
 comp    =  try (do reserved lis "resistance"

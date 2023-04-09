@@ -40,4 +40,4 @@ run ifile =
 
 
 -- Metodo auxiliar para leer un archivo de texto y retorna el string
-shortLinesOnly input = readFile input
+--shortLinesOnly input = readFile input
