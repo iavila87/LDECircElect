@@ -173,13 +173,13 @@ strComp (CompExpr (Capacitance (Const c))) = ("to[C={" ++ (show c) ++ "}{ uF},-]
 
 strComp (CompExpr Ohmmeter) = "to[ohmmeter]"
 
-strComp (CompExpr Amperemeter) = "to [rmeterwa, t=A, i=$i$]" --"to[ammeter]"
+strComp (CompExpr Amperemeter) = "to [rmeterwa, t=A, i=$i$]"
 
-strComp (CompExpr Voltmeter) = "to[rmeterwa, t=V, v=$v$]" --"to[voltmeter]"
+strComp (CompExpr Voltmeter) = "to[rmeterwa, t=V, v=$v$]"
 
-strComp (CompExpr (Switch BTrue)) = "to[ccsw, l=1, -, name=s1]"
+strComp (CompExpr (Switch BTrue)) = "to[ccsw, -, name=s1]"
 
-strComp (CompExpr (Switch BFalse)) = "to[cosw, l=1, -, name=s1]"
+strComp (CompExpr (Switch BFalse)) = "to[cosw, -, name=s1]"
 
 strComp (CompExpr (Source (Const r))) = "to[battery1={" ++ (show r) ++ "}{V}]"
 

@@ -9,10 +9,10 @@ initStateCirc = usePackCirc1 ++ usePackCirc2 ++ usePackCirc3 ++ titAuthCirc ++ b
 
 
 usePackCirc1 :: StateCirc
-usePackCirc1 = "\\documentclass{article}\n\\usepackage[europeanresistors,americaninductors]{circuitikz}\n\\usepackage{siunitx}\n\\usetikzlibrary{calc}\n\\usetikzlibrary{patterns}\n"
+usePackCirc1 = "\\documentclass{article}\n\\usepackage[europeanresistors]{circuitikz}\n"
 
 usePackCirc2 :: StateCirc
-usePackCirc2 = "\\ctikzset{bipoles/thickness=0.8}\n\\ctikzset{bipoles/length=1cm}\n\\tikzstyle{every node}=[font=\\normalsize]\n\\tikzstyle{every path}=[line width=1.25pt, line cap=round, line join=round]\n"
+usePackCirc2 = "\\ctikzset{bipoles/thickness=0.8}\n\\ctikzset{bipoles/length=1cm}\n\\tikzstyle{every path}=[line width=1.25pt, line cap=round, line join=round]\n"
 
 usePackCirc3 :: StateCirc
 usePackCirc3 = "\\usepackage{lmodern}\n\\usepackage[T1]{fontenc}\n\\usepackage[spanish,activeacute]{babel}\n\\usepackage{mathtools}\n"
