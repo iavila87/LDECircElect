@@ -241,6 +241,7 @@ resTotal circ = if (findCap circ) then -1
 resTotal' circ = case circ of 
                          CompExpr (Resistance (Const x))    -> x
                          Serie (CompExpr Voltmeter) (c2)    -> resTotal' c2
+                         Serie (CompExpr (Source n)) (c2)    -> resTotal' c2
                          Serie c1 c2        -> (resTotal' c1) + (resTotal' c2)
                          
                          Parallel c1 c2     -> ((resTotal' c1) * (resTotal' c2)) `div` ((resTotal' c1) + (resTotal' c2))
