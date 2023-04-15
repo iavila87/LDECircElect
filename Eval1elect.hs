@@ -64,44 +64,44 @@ evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 
 evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               yIni  = lookfor "coordY" s
-                              -- evalComm' (Serie c1 c2)
-                              (str1,s1) = (evalComm' c s)
-                              s2 = updateCirc str1 s1
+                              s1 = evalComm' c s
                               -- Valores de coordenadas luego de evalComm'
-                              xFinEval = lookfor "coordX" s2
-                              yFinEval = lookfor "coordY" s2
+                              xFinEval = lookfor "coordX" s1
+                              yFinEval = lookfor "coordY" s1
                               -- Cierre de circuito con el dibujo de GND
+                              str1 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval) yFinEval)
                               str2 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval+2) yIni)
                               str3 = strLine (strCoord (xFinEval+2) yIni) (strCoord (xFinEval+2) (yIni-2))
                               str4 = "\\draw" ++ (strCoord (xFinEval+2) (yIni-2)) ++ gndCirc ++ ";\n"
-
+                              -- Calculo de la resistencia total del circuito y armado del string
                               rtotal = "\\\\\\\\La resistencia total del circuito es de " ++ cnv (resTotal c) ++ " ohm.\n"
-
                               -- Actualizo y cierro la seccion de circuito de LATEX
-                          in updateCirc (str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ endDoc) s2
+                          in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ endDoc) s1
 
 
-evalComm' :: Circ -> State -> ([Char], State)
+evalComm' :: Circ -> State -> State
 evalComm' c s = case c of
-                    Serie c1 c2 -> let (str1,s1) = (evalComm' c1 s)
-                                       (str2,s2) = (evalComm' c2 s1)
-                                   in (str1 ++ str2, s2)
+                    Serie c1 c2 -> let s1 = evalComm' c1 s
+                                       s2 = evalComm' c2 s1
+                                   in  s2
                     
                     Parallel c1 c2 -> let xIni  = lookfor "coordX" s
                                           yIni  = lookfor "coordY" s
                                           -- Evaluacion de c1
-                                          (str1,s3) = (evalComm' c1 s)
+                                          s3 = evalComm' c1 s
                                           xFinEvalC1  = lookfor "coordX" s3
                                           yFinEvalC1  = lookfor "coordY" s3
                                           -- linea vertical que une c1 con c2
                                           str6 = strLine (strCoord xIni yIni) (strCoord xIni (yIni-2))
-                                          -- Actualizo coordX y coordY antes de evaluar el siguiente componente del paralelo
+                                          -- Actualizo coordX y coordY antes de evaluar el siguiente 
+                                          -- componente del paralelo
                                           s4 = update "coordX" (xFinEvalC1-2) s3
                                           s5 = update "coordY" (yFinEvalC1-2) s4
-                                          -- linea vertical que une c1 con c2
+                                          -- linea vertical que une c1 con c2.
+                                          -- Se actualiza para que no quede ninguna línea en blanco
                                           str3 = strLine (strCoord xIni yFinEvalC1) (strCoord xIni (yFinEvalC1-2))
                                           -- Evaluacion de c2
-                                          (str2,s6) = (evalComm' c2 s5)
+                                          s6 = evalComm' c2 s5
                                           xFinEvalC2  = lookfor "coordX" s6
                                           yFinEvalC2  = lookfor "coordY" s6
                                           -- Linea horizontal en la linea de c2
@@ -111,21 +111,22 @@ evalComm' c s = case c of
                                           -- 
                                           str7a = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC1 yFinEvalC2)
                                           str7b = strLine (strCoord xFinEvalC2 yFinEvalC2) (strCoord xFinEvalC2 yFinEvalC1)
-                                          --
+                                          
                                       in if (isX1Mayor xFinEvalC1 xFinEvalC2) then
-                                            (str1 ++ str2 ++ str3 ++ str4 ++ str5 ++ str6 ++ str7a, s6)
+                                            updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7a) s6
                                          else
-                                            (str1 ++ str2 ++ str3 ++ str4 ++ str5 ++ str6 ++ str7b, s6)
+                                            updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7b) s6
                     
                     
                     CompExpr (Source (Const n)) -> let x  = lookfor "coordX" s
                                                        y  = lookfor "coordY" s
                                                        s1 = update "coordX" (x+2) s
                                                        s2 = update "coordY" y s1
+                                                       --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
                                                        str1 = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr (Source (Const n)))) ++ (strCoord (x) (y-2)) ++ ";\n"
                                                        str2 = strLine (strCoord x y) (strCoord (x+2) y)
                                                        str3 = "\\draw" ++ (strCoord x (y-2)) ++ gndCirc ++ ";\n"
-                                                   in (str1 ++ str2 ++ str3, s2)
+                                                   in  updateCirc (str1++str2++str3) s2 --(str1 ++ str2 ++ str3, s2)
 
                     CompExpr Voltmeter -> let x  = lookfor "coordX" s
                                               y  = lookfor "coordY" s
@@ -134,7 +135,7 @@ evalComm' c s = case c of
                                               str1 = strLine (strCoord x y) (strCoord (x+2) y)
                                               str2 = "\\draw" ++ (strCoord (x+1) y) ++ (strComp (CompExpr Voltmeter)) ++ (strCoord (x+1) (y-2)) ++ ";\n"
                                               str3 = "\\draw" ++ (strCoord (x+1) (y-2)) ++ gndCirc ++ ";\n"
-                                          in (str1 ++ str2 ++ str3, s2)
+                                          in  updateCirc (str1++str2++str3) s2
 
                     CompExpr Amperemeter -> let x  = lookfor "coordX" s
                                                 y  = lookfor "coordY" s
@@ -142,7 +143,8 @@ evalComm' c s = case c of
                                                 s2 = update "coordY" (y) s1
                                                 x1  = lookfor "coordX" s2
                                                 y1  = lookfor "coordY" s2
-                                            in ("\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x1) y1) ++ ";\n", s2)
+                                                str1 = ("\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x1) y1) ++ ";\n")
+                                            in  updateCirc (str1) s2
 
                     CompExpr c1 -> let x  = lookfor "coordX" s
                                        y  = lookfor "coordY" s
@@ -150,7 +152,8 @@ evalComm' c s = case c of
                                        s2 = update "coordY" (y) s1
                                        x1  = lookfor "coordX" s2
                                        y1  = lookfor "coordY" s2
-                                   in ("\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c1)) ++ (strCoord (x1) y1) ++ ";\n", s2)
+                                       str1 = "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c1)) ++ (strCoord (x1) y1) ++ ";\n"
+                                   in  updateCirc (str1) s2
 
 -- Funcion que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
