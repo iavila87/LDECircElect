@@ -3,6 +3,7 @@ module Eval1elect where
 
 import ASTelec
 import Stringcirc
+import Control.Monad (guard)
 
 
 -- Estados
@@ -22,9 +23,6 @@ initState = let s  = update "coordX" 0 ([],initStateCirc)
 updateCirc :: String -> State -> State
 updateCirc txt (s,"") = (s,txt)
 updateCirc txt (s,scirc) = (s,scirc ++ txt)
-
-
-
 
 
 -- Busca el valor de una variabl en un estado
@@ -74,7 +72,7 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               str3 = strLine (strCoord (xFinEval+2) yIni) (strCoord (xFinEval+2) (yIni-2))
                               str4 = "\\draw" ++ (strCoord (xFinEval+2) (yIni-2)) ++ gndCirc ++ ";\n"
                               -- Calculo de la resistencia total del circuito y armado del string
-                              rtotal = "\\\\\\\\La resistencia total del circuito es de " ++ cnv (resTotal c) ++ " ohm.\n"
+                              rtotal = msgRes (resistenciaTotal c)
                               -- Actualizo y cierro la seccion de circuito de LATEX
                           in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ endDoc) s1
 
@@ -236,19 +234,36 @@ evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
 evalBoolExp (Not exp1) estado = not (evalBoolExp exp1 estado)
 
 
--- Calculo de la resistencia total del circuito.
-resTotal :: Circ -> Integer
-resTotal circ = if (findCap circ) then -1
-                else resTotal' circ
+-- Defino la función para calcular la resistencia total de un circuito. Usamos tipo de dato Maybe para contemplar errores
+resistenciaTotal :: Circ -> Maybe Integer
+resistenciaTotal (Serie circ1 circ2) = do
+  r1 <- resistenciaTotal circ1
+  r2 <- resistenciaTotal circ2
+  return (r1 + r2)
+resistenciaTotal (Parallel circ1 circ2) = do
+  r1 <- resistenciaTotal circ1
+  r2 <- resistenciaTotal circ2
+  guard ((r1 + r2) /= 0)  -- Agrego una guarda para evitar división por cero. Utilizo guard para verificar si la suma r1 + r2 es diferente de cero antes de realizar la división.
+  return ((r1 * r2) `div` (r1 + r2))
+resistenciaTotal (CompExpr comp) = Just (resistenciaComponente comp)
 
-resTotal' circ = case circ of 
-                         CompExpr (Resistance (Const x))    -> x
-                         Serie (CompExpr Voltmeter) (c2)    -> resTotal' c2
-                         Serie (CompExpr (Source n)) (c2)    -> resTotal' c2
-                         Serie c1 c2        -> (resTotal' c1) + (resTotal' c2)
-                         
-                         Parallel c1 c2     -> ((resTotal' c1) * (resTotal' c2)) `div` ((resTotal' c1) + (resTotal' c2))
-                         
+-- Defino la función auxiliar para obtener la resistencia de un componente
+resistenciaComponente :: Comp -> Integer
+resistenciaComponente (Resistance (Const v)) = v
+resistenciaComponente (Capacitance _) = 0
+resistenciaComponente (Source _) = 0
+resistenciaComponente (Switch _) = 0
+resistenciaComponente Voltmeter = 0
+resistenciaComponente Amperemeter = 0
+resistenciaComponente Ohmmeter = 0
+
+--Evalúo si se puede calcular la resistencia de un circuito y retorno un mensaje en consecuencia
+--msgRes::Maybe->String
+msgRes rt= case rt of 
+            Nothing ->"\\\\\\\\No se puede calcular la resistencia del circuito.\n"
+            Just r -> "\\\\\\\\La resistencia total del circuito es de " ++ (cnv r) ++ " ohm.\n"
+
+
 -- Calculo de la capacidad total del circuito.
 capTotal :: Circ -> Integer
 capTotal circ = if (findCap circ) then capTotal' circ
