@@ -162,9 +162,9 @@ evalComm' c s = case c of
                                    in  updateCirc (str1) s2
 
 -- Función que retorna un String para dibujar una línea en Latex
+strLine :: [Char] -> [Char] -> [Char]
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
 
---
 -- Función para convertir a String
 cnv :: Show a => a -> String
 cnv n = show n
@@ -176,36 +176,32 @@ strCoord x y = " ("++ (cnv x) ++","++ (cnv y) ++") "
 -- Función que retorna el String para dibujar un componente específico en latex
 strComp :: Circ -> [Char]
 strComp (CompExpr (Resistance (Const r))) = ("to[R={" ++ (show r) ++ "}{ ohm},-]")
-
 strComp (CompExpr (Capacitance (Const c))) = ("to[C={" ++ (show c) ++ "}{ uF},-]")
-
 strComp (CompExpr Ohmmeter) = "to[ohmmeter]"
-
 strComp (CompExpr Amperemeter) = "to [rmeterwa, t=A, i=$i$]"
-
 strComp (CompExpr Voltmeter) = "to[rmeterwa, t=V, v=$v$]"
-
 strComp (CompExpr (Switch BTrue)) = "to[ccsw, -, name=s1]"
-
 strComp (CompExpr (Switch BFalse)) = "to[cosw, -, name=s1]"
-
 strComp (CompExpr (Source (Const r))) = "to[battery1={" ++ (show r) ++ "}{V}]"
 
 --Función para devolver concatenado el String que dibuja en GND
+drawGND :: (Show a1, Show a2) => a1 -> a2 -> [Char]
 drawGND x y = "\\draw" ++ (strCoord x y) ++ gndCirc ++ ";\n"
 
 --Función para devolver concatenado el String que dibuja la Source
+drawSource :: (Show a1, Show a2, Num a2) => a1 -> a2 -> Integer -> [Char]
 drawSource x y n = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr (Source (Const n)))) ++ (strCoord (x) (y-2)) ++ ";\n"
 
 --Función para devolver concatenado el String que dibuja el Voltímetro
-
+drawVoltimeter :: (Show a1, Show a2, Num a2) => a1 -> a2 -> [Char]
 drawVoltimeter x y = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr Voltmeter)) ++ (strCoord x (y-2)) ++ ";\n"
 
 --Función para devolver concatenado el String que dibuja el Amperímetro
-  
+drawAmperemeter :: (Show a1, Show a2, Num a1) => a1 -> a2 -> [Char]
 drawAmperemeter x y = "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x +2) y) ++ ";\n"
 
 --Función para devolver concatenado el String que dibuja el Componente
+drawComponent :: (Show a1, Show a2, Num a1) => a1 -> a2 -> Comp -> [Char]
 drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c)) ++ (strCoord (x +2) y) ++ ";\n"
 
 -- Evalúa una expresión entera
@@ -228,7 +224,6 @@ evalIntExp (Times exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalIntExp (Div exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
                                         in div valor1 valor2
-
 
 -- Evalua una expresion booleana
 -- Completar definición
@@ -256,18 +251,17 @@ evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                         in valor1 || valor2
 evalBoolExp (Not exp1) estado = not (evalBoolExp exp1 estado)
 
-
 -- Defino la función para calcular la resistencia total de un circuito. Usamos tipo de dato Maybe para contemplar errores
 resistenciaTotal :: Circ -> Maybe Integer
 resistenciaTotal (Serie circ1 circ2) = do
-  r1 <- resistenciaTotal circ1
-  r2 <- resistenciaTotal circ2
-  return (r1 + r2)
+                                        r1 <- resistenciaTotal circ1
+                                        r2 <- resistenciaTotal circ2
+                                        return (r1 + r2)
 resistenciaTotal (Parallel circ1 circ2) = do
-  r1 <- resistenciaTotal circ1
-  r2 <- resistenciaTotal circ2
-  guard ((r1 + r2) /= 0)  -- Agrego una guarda para evitar división por cero. Utilizo guard para verificar si la suma r1 + r2 es diferente de cero antes de realizar la división.
-  return ((r1 * r2) `div` (r1 + r2))
+                                        r1 <- resistenciaTotal circ1
+                                        r2 <- resistenciaTotal circ2
+                                        guard ((r1 + r2) /= 0)  -- Agrego una guarda para evitar división por cero. Utilizo guard para verificar si la suma r1 + r2 es diferente de cero antes de realizar la división.
+                                        return ((r1 * r2) `div` (r1 + r2))
 resistenciaTotal (CompExpr comp) = Just (resistenciaComponente comp)
 
 -- Defino la función auxiliar para obtener la resistencia de un componente
@@ -281,24 +275,22 @@ resistenciaComponente Amperemeter = 0
 resistenciaComponente Ohmmeter = 0
 
 --Evalúo si se puede calcular la resistencia de un circuito y retorno un mensaje en consecuencia
---msgRes::Maybe->String
+msgRes :: Show a => Maybe a -> [Char]
 msgRes rt= case rt of 
             Nothing ->"\\\\\\\\No se puede calcular la resistencia del circuito.\n"
             Just r -> "\\\\\\\\La resistencia total del circuito es de " ++ (cnv r) ++ " ohm.\n"
 
-
-
 -- Defino la función para calcular la capacitancia de un circuito. Usamos tipo de dato Maybe para contemplar errores
 capacidadTotal :: Circ -> Maybe Integer
 capacidadTotal (Serie circ1 circ2) = do
-  c1 <- capacidadTotal circ1
-  c2 <- capacidadTotal circ2
-  guard ((c1 + c2) /= 0)  -- Agrego una guarda para evitar división por cero.
-  return ((c1 * c2) `div` (c1 + c2))
+                                      c1 <- capacidadTotal circ1
+                                      c2 <- capacidadTotal circ2
+                                      guard ((c1 + c2) /= 0)  -- Agrego una guarda para evitar división por cero.
+                                      return ((c1 * c2) `div` (c1 + c2))
 capacidadTotal (Parallel circ1 circ2) = do
-  c1 <- capacidadTotal circ1
-  c2 <- capacidadTotal circ2
-  return (c1 + c2)
+                                          c1 <- capacidadTotal circ1
+                                          c2 <- capacidadTotal circ2
+                                          return (c1 + c2)
 capacidadTotal (CompExpr comp) = Just (capacidadComponente comp)
 
 -- Defino la función auxiliar para obtener la capacitancia de un componente
@@ -312,6 +304,7 @@ capacidadComponente Amperemeter = 0
 capacidadComponente Ohmmeter = 0
 
 --Evalúo si se puede calcular la capacitancia de un circuito y retorno un mensaje en consecuencia
+msgCap :: Show a => Maybe a -> [Char]
 msgCap ct= case ct of 
             Nothing ->"\\\\\\\\No se puede calcular la capacitancia del circuito.\n"
             Just c -> "\\\\\\\\La capacitancia del circuito es de " ++ (cnv c) ++ " uF.\n"
@@ -333,18 +326,20 @@ findCap c = case c of
 
 -- Calculo de la intensidad total del circuito.
 --Intensidad= Tensión/ resistencia
---ampTotal :: Integer -> Circ -> Integer
+ampTotal :: Integer -> Circ -> Maybe Integer
 ampTotal v c = let rt = resistenciaTotal c 
                in case rt of 
                        Nothing -> Nothing
                        Just x -> Just (v `div` x)
 
 --Evalúo si se puede calcular la intensidad de un circuito y retorno un mensaje en consecuencia
+msgAmpere :: Show a => Maybe a -> [Char]
 msgAmpere ap= case ap of 
             Nothing ->"\\\\\\\\No se puede calcular el amperaje total del circuito.\n"
             Just a -> "\\\\\\\\El amperaje total del circuito es de " ++ (cnv a) ++ "A.\n"
 
 --Busco la Source en mi árbol. Mi Source va a estar a la izquierda
+findSource :: Circ -> Integer
 findSource (CompExpr c) = case c of
                                Source (Const v) -> v
                                _ -> 0
