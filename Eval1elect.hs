@@ -326,13 +326,10 @@ msgAmpere ap= case ap of
             Just a -> "\\\\\\\\El amperaje total del circuito es de " ++ (cnv a) ++ "A.\n"
 
 --Busco la Source en mi árbol. Mi Source va a estar a la izquierda
-findSource (CircExpr (Serie (CompExpr c) r)) = case c of
-                                                    Source (Const v) -> v
-                                                    _ -> 0
-findSource (CircExpr (Parallel (CompExpr c) r)) = case c of
-                                                       Source (Const v) -> v
-                                                       _ -> 0
-findSource (CircExpr (Serie l r)) = findSource l
-findSource (CircExpr (Parallel l r)) =findSource l
+findSource (CompExpr c) = case c of
+                               Source (Const v) -> v
+                               _ -> 0
+findSource (Serie l r) = findSource l
+findSource (Parallel l r) = findSource l
 
 
