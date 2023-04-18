@@ -25,7 +25,7 @@ updateCirc txt (s,"") = (s,txt)
 updateCirc txt (s,scirc) = (s,scirc ++ txt)
 
 
--- Busca el valor de una variabl en un estado
+-- Busca el valor de una variable en un estado
 -- Completar la definicion
 lookfor :: NVar -> State -> Integer
 lookfor var (((x,y):xs, sc))= if var == x then y
@@ -39,17 +39,18 @@ update var valor ([],sc) = ([(var,valor)],sc)
 update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
                                           else ((x,y): fst (update var valor (xs,sc)),sc)
 
--- Evalua un programa en el estado nulo
+-- Evalúa un programa en el estado inicial
 eval :: Comm -> State
 eval p = evalComm p initState
 
--- Evalua un comando en un estado dado
+-- Evalúa un comando en un estado dado
 -- Completar definicion
+-- s representa estado
 evalComm :: Comm -> State -> State
-evalComm Skip e = e
-evalComm (Let var expInt) estado = let valor = evalIntExp expInt estado
-                                       in update var valor estado
-evalComm (Seq Skip c1) s = evalComm c1 s
+evalComm Skip s = s
+evalComm (Let var expInt) s = let valor = evalIntExp expInt s
+                                       in update var valor s
+evalComm (Seq Skip c2) s = evalComm c2 s
 evalComm (Seq c1 c2) s = let s' = evalComm c1 s
                                   in evalComm (Seq Skip c2) s'
 evalComm (Cond b c1 c2) s = if (evalBoolExp b s )
@@ -71,11 +72,11 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               str2 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval+2) yIni)
                               str3 = strLine (strCoord (xFinEval+2) yIni) (strCoord (xFinEval+2) (yIni-2))
                               str4 = drawGND (xFinEval +2) (yIni -2)
-                              -- Cálculo de la resistencia total del circuito y armado del string
+                              -- Cálculo de la resistencia total del circuito y armado del String
                               rtotal = msgRes (resistenciaTotal c)
-                              -- Cálculo de la capacitancia del circuito y armado del string
+                              -- Cálculo de la capacitancia del circuito y armado del String
                               captotal = msgCap (capacidadTotal c)
-                              -- Cálculo del amperaje del circuito y armado del string
+                              -- Cálculo del amperaje del circuito y armado del String
                               atotal = msgAmpere (ampTotal (findSource c) c)
                               -- Actualizo y cierro la seccion de circuito de LATEX
                           in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s1
@@ -84,25 +85,26 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
 evalComm' :: Circ -> State -> State
 evalComm' c s = case c of
                     Serie c1 c2 -> let s1 = evalComm' c1 s
-                                       s2 = evalComm' c2 s1
-                                   in  s2
+                                   in  evalComm' c2 s1
+                          
                     
                     Parallel c1 c2 -> let xIni  = lookfor "coordX" s
                                           yIni  = lookfor "coordY" s
-                                          -- Evaluacion de c1
+                                          -- Evaluación de c1
                                           s3 = evalComm' c1 s
                                           xFinEvalC1  = lookfor "coordX" s3
                                           yFinEvalC1  = lookfor "coordY" s3
-                                          -- linea vertical que une c1 con c2
+                                          -- Línea vertical que une c1 con c2
                                           str6 = strLine (strCoord xIni yIni) (strCoord xIni (yIni-2))
                                           -- Actualizo coordX y coordY antes de evaluar el siguiente 
                                           -- componente del paralelo
                                           s4 = update "coordX" (xFinEvalC1-2) s3
                                           s5 = update "coordY" (yFinEvalC1-2) s4
-                                          -- linea vertical que une c1 con c2.
+                                          -- Línea vertical que une c1 con c2.
                                           -- Se actualiza para que no quede ninguna línea en blanco
+                                          -- Línea vertical
                                           str3 = strLine (strCoord xIni yFinEvalC1) (strCoord xIni (yFinEvalC1-2))
-                                          -- Evaluacion de c2
+                                          -- Evaluación de c2
                                           s6 = evalComm' c2 s5
                                           xFinEvalC2  = lookfor "coordX" s6
                                           yFinEvalC2  = lookfor "coordY" s6
@@ -113,13 +115,13 @@ evalComm' c s = case c of
                                           -- 
                                           str7a = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC1 yFinEvalC2)
                                           str7b = strLine (strCoord xFinEvalC2 yFinEvalC2) (strCoord xFinEvalC2 yFinEvalC1)
-                                          
-                                      in if (isX1Mayor xFinEvalC1 xFinEvalC2) then
+                                          -- Comparando coordenadas según longitud del paralelo.
+                                      in if (xFinEvalC1 > xFinEvalC2) then
                                             updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7a) s6
                                          else
                                             updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7b) s6
                     
-                    
+                    -- Empiezo a dibujar los componentes
                     CompExpr (Source (Const n)) -> let x  = lookfor "coordX" s
                                                        y  = lookfor "coordY" s
                                                        s1 = update "coordX" (x+2) s
@@ -128,7 +130,8 @@ evalComm' c s = case c of
                                                        str1 = drawSource x y n 
                                                        str2 = strLine (strCoord x y) (strCoord (x+2) y)
                                                        str3 = drawGND x (y-2)
-                                                   in  updateCirc (str1++str2++str3) s2 --(str1 ++ str2 ++ str3, s2)
+                                                       -- Actualizo el string de latex
+                                                   in  updateCirc (str1 ++ str2 ++ str3) s2
 
                     CompExpr Voltmeter -> let x  = lookfor "coordX" s
                                               y  = lookfor "coordY" s
@@ -137,7 +140,7 @@ evalComm' c s = case c of
                                               str1 = strLine (strCoord x y) (strCoord (x+2) y)
                                               str2 = drawVoltimeter (x+1) y
                                               str3 = drawGND (x +1)(y-2)
-                                          in  updateCirc (str1++str2++str3) s2
+                                          in  updateCirc (str1 ++ str2 ++ str3) s2
 
                     CompExpr Amperemeter -> let x  = lookfor "coordX" s
                                                 y  = lookfor "coordY" s
@@ -155,23 +158,22 @@ evalComm' c s = case c of
                                        s2 = update "coordY" (y) s1
                                        --Dibujo componente desde coordenadas iniciales
                                        str1 = drawComponent x y c1 
-                                       --Actualizo string de Latex
+                                       --Actualizo String de Latex
                                    in  updateCirc (str1) s2
 
--- Funcion que retorna un string para dibujar una linea en Latex
+-- Función que retorna un String para dibujar una línea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
 
--- Funcion que devuelve el mayor
-isX1Mayor :: Ord a => a -> a -> Bool
-isX1Mayor n m = if n < m then False else True
 --
+-- Función para convertir a String
 cnv :: Show a => a -> String
 cnv n = show n
 
---
+-- Función para retornar un String con la tupla de coordenadas
 strCoord :: (Show a1, Show a2) => a1 -> a2 -> [Char]
 strCoord x y = " ("++ (cnv x) ++","++ (cnv y) ++") "
 
+-- Función que retorna el String para dibujar un componente específico en latex
 strComp :: Circ -> [Char]
 strComp (CompExpr (Resistance (Const r))) = ("to[R={" ++ (show r) ++ "}{ ohm},-]")
 
@@ -189,21 +191,21 @@ strComp (CompExpr (Switch BFalse)) = "to[cosw, -, name=s1]"
 
 strComp (CompExpr (Source (Const r))) = "to[battery1={" ++ (show r) ++ "}{V}]"
 
---Función para devolver concatenado el string que dibuja en GND
+--Función para devolver concatenado el String que dibuja en GND
 drawGND x y = "\\draw" ++ (strCoord x y) ++ gndCirc ++ ";\n"
 
---Función para devolver concatenado el string que dibuja la Source
+--Función para devolver concatenado el String que dibuja la Source
 drawSource x y n = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr (Source (Const n)))) ++ (strCoord (x) (y-2)) ++ ";\n"
 
---Función para devolver concatenado el string que dibuja el Voltímetro
+--Función para devolver concatenado el String que dibuja el Voltímetro
 
 drawVoltimeter x y = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr Voltmeter)) ++ (strCoord x (y-2)) ++ ";\n"
 
---Función para devolver concatenado el string que dibuja el Amperímetro
+--Función para devolver concatenado el String que dibuja el Amperímetro
   
 drawAmperemeter x y = "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x +2) y) ++ ";\n"
 
---Función para devolver concatenado el string que dibuja el Componente
+--Función para devolver concatenado el String que dibuja el Componente
 drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c)) ++ (strCoord (x +2) y) ++ ";\n"
 
 -- Evalúa una expresión entera
@@ -228,8 +230,8 @@ evalIntExp (Div exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         in div valor1 valor2
 
 
--- Evalua una expresion entera
--- Completar definicion
+-- Evalua una expresion booleana
+-- Completar definición
 evalBoolExp :: BoolExp -> State -> Bool
 evalBoolExp BTrue estado = True
 evalBoolExp BFalse estado = False
