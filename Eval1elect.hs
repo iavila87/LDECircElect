@@ -76,7 +76,7 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               -- Cálculo de la capacitancia del circuito y armado del string
                               captotal = msgCap (capacidadTotal c)
                               -- Cálculo del amperaje del circuito y armado del string
-                              atotal = msgAmpere (ampTotal c)
+                              atotal = msgAmpere (ampTotal (findSource c) c)
                               -- Actualizo y cierro la seccion de circuito de LATEX
                           in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s1
 
@@ -324,4 +324,11 @@ ampTotal v c = let rt = resTotal c
 msgAmpere ap= case ap of 
             Nothing ->"\\\\\\\\No se puede calcular el amperaje total del circuito.\n"
             Just a -> "\\\\\\\\El amperaje total del circuito es de " ++ (cnv a) ++ "A.\n"
+
+--Busco la Source en mi árbol. Mi Source va a estar a la izquierda
+findSource (CircExpr (Serie l r)) = findSource l
+findSource (CircExpr (Parallel l r)) =findSource l
+findSource (CompExpr c) = case c of
+                              Source (Const v) -> v
+                              _ -> 0
 
