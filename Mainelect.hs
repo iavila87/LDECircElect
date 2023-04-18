@@ -34,5 +34,5 @@ run ifile =
         -- writeFile "testdecreacion.tex" (snd ( evalComm (CircExpr (Serie (CompExpr (Source (Const 12))) (CompExpr (Switch BFalse)) )) initState ) )
         putStrLn $ "se creo el documento."
         -- ejecuta un comando de sistema
-        system "pdflatex circuit.tex" >>= \exitCode -> print exitCode
-        system "circuit.pdf" >>= \exitCode -> print exitCode
+        system "pdflatex circuitoutput.tex" >>= \exitCode -> print exitCode
+        system "circuitoutput.pdf" >>= \exitCode -> print exitCode
