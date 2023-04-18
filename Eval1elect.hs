@@ -70,7 +70,7 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               str1 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval) yFinEval)
                               str2 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval+2) yIni)
                               str3 = strLine (strCoord (xFinEval+2) yIni) (strCoord (xFinEval+2) (yIni-2))
-                              str4 = "\\draw" ++ (strCoord (xFinEval+2) (yIni-2)) ++ gndCirc ++ ";\n"
+                              str4 = drawGND (xFinEval +2) (yIni -2)
                               -- Cálculo de la resistencia total del circuito y armado del string
                               rtotal = msgRes (resistenciaTotal c)
                               -- Cálculo de la capacitancia del circuito y armado del string
@@ -125,9 +125,9 @@ evalComm' c s = case c of
                                                        s1 = update "coordX" (x+2) s
                                                        s2 = update "coordY" y s1
                                                        --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
-                                                       str1 = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr (Source (Const n)))) ++ (strCoord (x) (y-2)) ++ ";\n"
+                                                       str1 = drawSource x y n 
                                                        str2 = strLine (strCoord x y) (strCoord (x+2) y)
-                                                       str3 = "\\draw" ++ (strCoord x (y-2)) ++ gndCirc ++ ";\n"
+                                                       str3 = drawGND x (y-2)
                                                    in  updateCirc (str1++str2++str3) s2 --(str1 ++ str2 ++ str3, s2)
 
                     CompExpr Voltmeter -> let x  = lookfor "coordX" s
@@ -135,26 +135,27 @@ evalComm' c s = case c of
                                               s1 = update "coordX" (x+2) s
                                               s2 = update "coordY" y s1
                                               str1 = strLine (strCoord x y) (strCoord (x+2) y)
-                                              str2 = "\\draw" ++ (strCoord (x+1) y) ++ (strComp (CompExpr Voltmeter)) ++ (strCoord (x+1) (y-2)) ++ ";\n"
-                                              str3 = "\\draw" ++ (strCoord (x+1) (y-2)) ++ gndCirc ++ ";\n"
+                                              str2 = drawVoltimeter (x+1) y
+                                              str3 = drawGND (x +1)(y-2)
                                           in  updateCirc (str1++str2++str3) s2
 
                     CompExpr Amperemeter -> let x  = lookfor "coordX" s
                                                 y  = lookfor "coordY" s
+                                                -- Actualizo coordenadas para dibujar el próximo componente
                                                 s1 = update "coordX" (x+2) s
                                                 s2 = update "coordY" (y) s1
-                                                x1  = lookfor "coordX" s2
-                                                y1  = lookfor "coordY" s2
-                                                str1 = ("\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x1) y1) ++ ";\n")
+                                                --Dibujo amperímetro desde coordenadas iniciales
+                                                str1 = drawAmperemeter x y
+                                                --Actualizo string de Latex
                                             in  updateCirc (str1) s2
 
                     CompExpr c1 -> let x  = lookfor "coordX" s
                                        y  = lookfor "coordY" s
                                        s1 = update "coordX" (x+2) s
                                        s2 = update "coordY" (y) s1
-                                       x1  = lookfor "coordX" s2
-                                       y1  = lookfor "coordY" s2
-                                       str1 = "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c1)) ++ (strCoord (x1) y1) ++ ";\n"
+                                       --Dibujo componente desde coordenadas iniciales
+                                       str1 = drawComponent x y c1 
+                                       --Actualizo string de Latex
                                    in  updateCirc (str1) s2
 
 -- Funcion que retorna un string para dibujar una linea en Latex
@@ -188,9 +189,25 @@ strComp (CompExpr (Switch BFalse)) = "to[cosw, -, name=s1]"
 
 strComp (CompExpr (Source (Const r))) = "to[battery1={" ++ (show r) ++ "}{V}]"
 
+--Función para devolver concatenado el string que dibuja en GND
+drawGND x y = "\\draw" ++ (strCoord x y) ++ gndCirc ++ ";\n"
+
+--Función para devolver concatenado el string que dibuja la Source
+drawSource x y n = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr (Source (Const n)))) ++ (strCoord (x) (y-2)) ++ ";\n"
+
+--Función para devolver concatenado el string que dibuja el Voltímetro
+
+drawVoltimeter x y = "\\draw" ++ (strCoord x y) ++ (strComp (CompExpr Voltmeter)) ++ (strCoord x (y-2)) ++ ";\n"
+
+--Función para devolver concatenado el string que dibuja el Amperímetro
   
--- Evalua una expresion entera
--- Completar definicion
+drawAmperemeter x y = "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr Amperemeter)) ++ (strCoord (x +2) y) ++ ";\n"
+
+--Función para devolver concatenado el string que dibuja el Componente
+drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c)) ++ (strCoord (x +2) y) ++ ";\n"
+
+-- Evalúa una expresión entera
+-- Completar definición
 evalIntExp :: IntExp -> State -> Integer
 evalIntExp (Const valor) estado = valor
 evalIntExp (Var variable) estado = lookfor variable estado
