@@ -315,7 +315,7 @@ findCap c = case c of
 -- Calculo de la intensidad total del circuito.
 --Intensidad= Tensión/ resistencia
 --ampTotal :: Integer -> Circ -> Integer
-ampTotal v c = let rt = resTotal c 
+ampTotal v c = let rt = resistenciaTotal c 
                in case rt of 
                        Nothing -> Nothing
                        Just x -> Just (v `div` x)
