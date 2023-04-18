@@ -71,12 +71,14 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               str2 = strLine (strCoord xFinEval yIni) (strCoord (xFinEval+2) yIni)
                               str3 = strLine (strCoord (xFinEval+2) yIni) (strCoord (xFinEval+2) (yIni-2))
                               str4 = "\\draw" ++ (strCoord (xFinEval+2) (yIni-2)) ++ gndCirc ++ ";\n"
-                              -- Calculo de la resistencia total del circuito y armado del string
+                              -- Cálculo de la resistencia total del circuito y armado del string
                               rtotal = msgRes (resistenciaTotal c)
-                              -- Calculo de la capacitancia del circuito y armado del string
+                              -- Cálculo de la capacitancia del circuito y armado del string
                               captotal = msgCap (capacidadTotal c)
+                              -- Cálculo del amperaje del circuito y armado del string
+                              atotal = msgAmpere (ampTotal c)
                               -- Actualizo y cierro la seccion de circuito de LATEX
-                          in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ endDoc) s1
+                          in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s1
 
 
 evalComm' :: Circ -> State -> State
@@ -311,6 +313,15 @@ findCap c = case c of
 -}
 
 -- Calculo de la intensidad total del circuito.
-ampTotal :: Integer -> Circ -> Integer
-ampTotal v c = v `div` (resTotal c)
+--Intensidad= Tensión/ resistencia
+--ampTotal :: Integer -> Circ -> Integer
+ampTotal v c = let rt = resTotal c 
+               in case rt of 
+                       Nothing -> Nothing
+                       Just x -> Just (v `div` x)
+
+--Evalúo si se puede calcular la intensidad de un circuito y retorno un mensaje en consecuencia
+msgAmpere ap= case ap of 
+            Nothing ->"\\\\\\\\No se puede calcular el amperaje total del circuito.\n"
+            Just a -> "\\\\\\\\El amperaje total del circuito es de " ++ (cnv a) ++ "A.\n"
 
