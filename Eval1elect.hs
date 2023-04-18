@@ -73,8 +73,10 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                               str4 = "\\draw" ++ (strCoord (xFinEval+2) (yIni-2)) ++ gndCirc ++ ";\n"
                               -- Calculo de la resistencia total del circuito y armado del string
                               rtotal = msgRes (resistenciaTotal c)
+                              -- Calculo de la capacitancia del circuito y armado del string
+                              captotal = msgCap (capacidadTotal c)
                               -- Actualizo y cierro la seccion de circuito de LATEX
-                          in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ endDoc) s1
+                          in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ endDoc) s1
 
 
 evalComm' :: Circ -> State -> State
@@ -264,18 +266,36 @@ msgRes rt= case rt of
             Just r -> "\\\\\\\\La resistencia total del circuito es de " ++ (cnv r) ++ " ohm.\n"
 
 
--- Calculo de la capacidad total del circuito.
-capTotal :: Circ -> Integer
-capTotal circ = if (findCap circ) then capTotal' circ
-                else -1
 
-capTotal' circ = case circ of 
-                         CompExpr (Capacitance (Const x))    -> x
-                         
-                         Serie c1 c2        -> ((capTotal' c1) * (capTotal' c2)) `div` ((capTotal' c1) + (capTotal' c2))
-                         
-                         Parallel c1 c2     -> (capTotal' c1) + (capTotal' c2)
+-- Defino la función para calcular la capacitancia de un circuito. Usamos tipo de dato Maybe para contemplar errores
+capacidadTotal :: Circ -> Maybe Integer
+capacidadTotal (Serie circ1 circ2) = do
+  c1 <- capacidadTotal circ1
+  c2 <- capacidadTotal circ2
+  guard ((c1 + c2) /= 0)  -- Agrego una guarda para evitar división por cero.
+  return ((c1 * c2) `div` (c1 + c2))
+capacidadTotal (Parallel circ1 circ2) = do
+  c1 <- capacidadTotal circ1
+  c2 <- capacidadTotal circ2
+  return (c1 + c2)
+capacidadTotal (CompExpr comp) = Just (capacidadComponente comp)
 
+-- Defino la función auxiliar para obtener la capacitancia de un componente
+capacidadComponente :: Comp -> Integer
+capacidadComponente (Capacitance (Const v)) = v
+capacidadComponente (Resistance _) = 0
+capacidadComponente (Source _) = 0
+capacidadComponente (Switch _) = 0
+capacidadComponente Voltmeter = 0
+capacidadComponente Amperemeter = 0
+capacidadComponente Ohmmeter = 0
+
+--Evalúo si se puede calcular la capacitancia de un circuito y retorno un mensaje en consecuencia
+msgCap ct= case ct of 
+            Nothing ->"\\\\\\\\No se puede calcular la capacitancia del circuito.\n"
+            Just c -> "\\\\\\\\La capacitancia del circuito es de " ++ (cnv c) ++ " uF.\n"
+
+{-
 -- Detecta si es un capacitor el componente
 isCapacitor c = case c of 
                     CompExpr (Capacitance x) -> True
@@ -288,6 +308,7 @@ findCap c = case c of
                     CompExpr x -> False
                     Serie c1 c2 -> (findCap c1) || (findCap c2)
                     Parallel c1 c2 -> (findCap c1) || (findCap c2)
+-}
 
 -- Calculo de la intensidad total del circuito.
 ampTotal :: Integer -> Circ -> Integer
