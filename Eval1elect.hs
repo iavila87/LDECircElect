@@ -10,7 +10,7 @@ data Error = UndefVar | DivByZero deriving (Show, Eq)
 
 -- Estados
 -- type State = [(NVar,Integer)]
-type State = ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estado del circuito
+type State = Either Error ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estado del circuito
 
 
 
@@ -18,7 +18,7 @@ type State = ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estad
 initState :: State
 initState = let s  = update "coordX" 0 ([],initStateCirc)
                 s' = update "coordY" 0 s
-            in s'
+            in Rigth s'
 
 
 -- Cambia el valor de una variable en un estado
@@ -28,9 +28,9 @@ updateCirc txt (s,scirc) = (s,scirc ++ txt)
 
 
 -- Busca el valor de una variable en un estado
--- Completar la definicion
-lookfor :: NVar -> State -> Integer
-lookfor var (((x,y):xs, sc))= if var == x then y
+lookfor :: NVar -> State -> Either Error Integer
+lookfor var ([],sc) = Left UndefVar
+lookfor var (((x,y):xs, sc))= if var == x then Rigth y
                                           else lookfor var (xs,sc)
 
 
