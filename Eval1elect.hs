@@ -270,29 +270,80 @@ evalIntExp (Div exp1 exp2) estado = case (evalIntExp exp1 estado) of
 
 -- Evalua una expresion booleana
 -- Completar definición
-evalBoolExp :: BoolExp -> State -> Bool
-evalBoolExp BTrue estado = True
-evalBoolExp BFalse estado = False
+evalBoolExp :: BoolExp -> State -> Either Error Bool
+evalBoolExp BTrue estado = Rigth True
+evalBoolExp BFalse estado = Rigth False
+                                    -- con errores
 evalBoolExp (Eq exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 == valor2
+                                    in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 == n2)
+                                                            error -> error
+                                            error -> error
+                                    -- sin errores
+                                    --let valor1 = evalIntExp exp1 estado
+                                    --    valor2 = evalIntExp exp2 estado
+                                    --    in valor1 == valor2
 
+                                    -- con errores
 evalBoolExp (Lt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 < valor2
+                                    in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 < n2)
+                                                            error -> error
+                                            error -> error
+                                    -- sin errores
+                                    --let valor1 = evalIntExp exp1 estado
+                                    --    valor2 = evalIntExp exp2 estado
+                                    --    in valor1 < valor2
 
+                                    -- con errores
 evalBoolExp (Gt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 > valor2
+                                    in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 > n2)
+                                                            error -> error
+                                            error -> error
+                                    -- sin errores
+                                    --let valor1 = evalIntExp exp1 estado
+                                    --    valor2 = evalIntExp exp2 estado
+                                    --in valor1 > valor2
 
+                                     -- con errores
 evalBoolExp (And exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                          valor2 = evalBoolExp exp2 estado
-                                        in valor1 && valor2
+                                     in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 && n2)
+                                                            error -> error
+                                            error -> error
+                                     -- sin errores
+                                     --let valor1 = evalBoolExp exp1 estado
+                                     --    valor2 = evalBoolExp exp2 estado
+                                     --   in valor1 && valor2
 
+                                    -- con errores
 evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                         valor2 = evalBoolExp exp2 estado
-                                        in valor1 || valor2
-evalBoolExp (Not exp1) estado = not (evalBoolExp exp1 estado)
+                                    in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 || n2)
+                                                            error -> error
+                                            error -> error
+                                    -- sin errores
+                                    --let valor1 = evalBoolExp exp1 estado
+                                    --    valor2 = evalBoolExp exp2 estado
+                                    --   in valor1 || valor2
+
+                                -- con errores
+evalBoolExp (Not exp1) estado = case (evalBoolExp exp1 estado) of
+                                    Rigth b1 -> not b1
+                                    error -> error
+                                -- sin errores
+                                -- not (evalBoolExp exp1 estado)
 
 -- Defino la función para calcular la resistencia total de un circuito. Usamos tipo de dato Maybe para contemplar errores
 resistenciaTotal :: Circ -> Maybe Integer
