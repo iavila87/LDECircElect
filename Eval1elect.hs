@@ -208,24 +208,65 @@ drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c)) ++ (
 
 -- Evalúa una expresión entera
 -- Completar definición
-evalIntExp :: IntExp -> State -> Integer
-evalIntExp (Const valor) estado = valor
+evalIntExp :: IntExp -> State -> Either Error Integer
+evalIntExp (Const valor) estado = Rigth valor
 evalIntExp (Var variable) estado = lookfor variable estado
+                                    -- con errores
 evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
+                                    in case valor of
+                                        Rigth n -> Rigth (-n)
+                                        error -> error
+                                    -- sin errores
+                                    let valor = evalIntExp expInt estado
                                     in (-valor)
+                                     -- con errores
 evalIntExp (Plus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                          valor2 = evalIntExp exp2 estado
-                                         in valor1 + valor2
-
+                                     in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 + n2)
+                                                            error -> error
+                                            error -> error
+                                     -- sin errores
+                                     --let valor1 = evalIntExp exp1 estado
+                                     --    valor2 = evalIntExp exp2 estado
+                                     --in valor1 + valor2
+                                      -- con errores
 evalIntExp (Minus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
-                                          in valor1 - valor2
+                                      in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 - n2)
+                                                            error -> error
+                                            error -> error
+                                      -- sin errores  
+                                      --let valor1 = evalIntExp exp1 estado
+                                      --    valor2 = evalIntExp exp2 estado
+                                      --in valor1 - valor2
+                                     -- con errores
 evalIntExp (Times exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
-                                          in valor1 * valor2
-evalIntExp (Div exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
-                                        valor2 = evalIntExp exp2 estado
-                                        in div valor1 valor2
+                                      in case valor1 of
+                                            Rigth n1 -> case valor2 of
+                                                            Rigth n2 -> Rigth (n1 * n2)
+                                                            error -> error
+                                            error -> error
+                                        -- sin errores
+                                        --let valor1 = evalIntExp exp1 estado
+                                        --    valor2 = evalIntExp exp2 estado
+                                        --in valor1 * valor2
+                                    -- con errores
+evalIntExp (Div exp1 exp2) estado = case (evalIntExp exp1 estado) of
+                                        Rigth n1 -> case (evalIntExp exp2 estado) of
+                                                        Rigth 0 -> Left DivByZero
+                                                        Rigth n2 -> Rigth (div n1 n2)
+                                                        Left error -> error -- error -> error
+                                        Left error -> Left error -- error -> error
+                                    
+                                        -- Sin errores
+                                        --let valor1 = evalIntExp exp1 estado
+                                        --    valor2 = evalIntExp exp2 estado
+                                        --in div valor1 valor2
 
 -- Evalua una expresion booleana
 -- Completar definición
