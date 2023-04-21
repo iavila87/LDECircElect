@@ -217,8 +217,8 @@ evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
                                         Rigth n -> Rigth (-n)
                                         error -> error
                                     -- sin errores
-                                    let valor = evalIntExp expInt estado
-                                    in (-valor)
+                                    --let valor = evalIntExp expInt estado
+                                    --in (-valor)
                                      -- con errores
 evalIntExp (Plus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                          valor2 = evalIntExp exp2 estado
