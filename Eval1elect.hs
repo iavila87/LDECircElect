@@ -5,6 +5,8 @@ import ASTelec
 import Stringcirc
 import Control.Monad (guard)
 
+-- Errores
+data Error = UndefVar | DivByZero deriving (Show, Eq)
 
 -- Estados
 -- type State = [(NVar,Integer)]
