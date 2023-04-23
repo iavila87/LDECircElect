@@ -18,7 +18,7 @@ type State = Either Error ([(NVar,Integer)], StateCirc) ---- cambios para introd
 initState :: State
 initState = let s  = update "coordX" 0 ([],initStateCirc)
                 s' = update "coordY" 0 s
-            in Rigth s'
+            in Right s'
 
 
 -- Cambia el valor de una variable en un estado
@@ -29,14 +29,17 @@ updateCirc txt (s,scirc) = (s,scirc ++ txt)
 
 -- Busca el valor de una variable en un estado
 lookfor :: NVar -> State -> Either Error Integer
-lookfor var ([],sc) = Left UndefVar
-lookfor var (((x,y):xs, sc))= if var == x then Rigth y
-                                          else lookfor var (xs,sc)
+lookfor var (Right s) = lookfor' var s
+
+lookfor' :: NVar -> ([(NVar,Integer)], StateCirc) -> Either Error Integer
+lookfor' var ([],sc) = Left UndefVar
+lookfor' var (((x,y):xs, sc))= if var == x then Right y
+                                           else lookfor' var (xs,sc)
 
 
 -- Cambia el valor de una variable en un estado
--- Completar la definicion
-update :: NVar -> Integer -> State -> State
+--update :: NVar -> Integer -> State -> State -- antes
+update :: NVar -> Integer -> ([(NVar,Integer)], StateCirc) -> ([(NVar,Integer)], StateCirc)
 update var valor ([],sc) = ([(var,valor)],sc)
 update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
                                           else ((x,y): fst (update var valor (xs,sc)),sc)
@@ -45,19 +48,37 @@ update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
 eval :: Comm -> State
 eval p = evalComm p initState
 
+-- Devuelve el contenido de un Right
+unRight (Right x) = x
+
 -- Evalúa un comando en un estado dado
--- Completar definicion
 -- s representa estado
 evalComm :: Comm -> State -> State
 evalComm Skip s = s
+                              -- con errores
 evalComm (Let var expInt) s = let valor = evalIntExp expInt s
-                                       in update var valor s
+                              in case valor of
+                                    Right v -> Right (update var v (unRight s))
+                                    Left error -> Left error
+                              -- sin errores
+                              --let valor = evalIntExp expInt s
+                              --in update var valor s
+
+
 evalComm (Seq Skip c2) s = evalComm c2 s
 evalComm (Seq c1 c2) s = let s' = evalComm c1 s
                                   in evalComm (Seq Skip c2) s'
-evalComm (Cond b c1 c2) s = if (evalBoolExp b s )
-                                           then evalComm c1 s
-                                           else evalComm c2 s
+
+                            -- con errores
+evalComm (Cond b c1 c2) s = case (evalBoolExp b s) of
+                                Right True -> evalComm c1 s
+                                Right False -> evalComm c2 s 
+                                Left error -> Left error
+                            -- sin errores
+                            --if (evalBoolExp b s )
+                            --               then evalComm c1 s
+                            --               else evalComm c2 s
+
 evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 
 
@@ -209,13 +230,13 @@ drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (CompExpr c)) ++ (
 -- Evalúa una expresión entera
 -- Completar definición
 evalIntExp :: IntExp -> State -> Either Error Integer
-evalIntExp (Const valor) estado = Rigth valor
+evalIntExp (Const valor) estado = Right valor
 evalIntExp (Var variable) estado = lookfor variable estado
                                     -- con errores
 evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
                                     in case valor of
-                                        Rigth n -> Rigth (-n)
-                                        error -> error
+                                        Right n -> Right (-n)
+                                        Left error -> Left error
                                     -- sin errores
                                     --let valor = evalIntExp expInt estado
                                     --in (-valor)
@@ -223,10 +244,10 @@ evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
 evalIntExp (Plus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                          valor2 = evalIntExp exp2 estado
                                      in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 + n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 + n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                      -- sin errores
                                      --let valor1 = evalIntExp exp1 estado
                                      --    valor2 = evalIntExp exp2 estado
@@ -235,10 +256,10 @@ evalIntExp (Plus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalIntExp (Minus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
                                       in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 - n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 - n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                       -- sin errores  
                                       --let valor1 = evalIntExp exp1 estado
                                       --    valor2 = evalIntExp exp2 estado
@@ -247,19 +268,19 @@ evalIntExp (Minus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalIntExp (Times exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
                                       in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 * n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 * n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                         -- sin errores
                                         --let valor1 = evalIntExp exp1 estado
                                         --    valor2 = evalIntExp exp2 estado
                                         --in valor1 * valor2
                                     -- con errores
 evalIntExp (Div exp1 exp2) estado = case (evalIntExp exp1 estado) of
-                                        Rigth n1 -> case (evalIntExp exp2 estado) of
-                                                        Rigth 0 -> Left DivByZero
-                                                        Rigth n2 -> Rigth (div n1 n2)
+                                        Right n1 -> case (evalIntExp exp2 estado) of
+                                                        Right 0 -> Left DivByZero
+                                                        Right n2 -> Right (div n1 n2)
                                                         Left error -> error -- error -> error
                                         Left error -> Left error -- error -> error
                                     
@@ -271,16 +292,16 @@ evalIntExp (Div exp1 exp2) estado = case (evalIntExp exp1 estado) of
 -- Evalua una expresion booleana
 -- Completar definición
 evalBoolExp :: BoolExp -> State -> Either Error Bool
-evalBoolExp BTrue estado = Rigth True
-evalBoolExp BFalse estado = Rigth False
+evalBoolExp BTrue estado = Right True
+evalBoolExp BFalse estado = Right False
                                     -- con errores
 evalBoolExp (Eq exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
                                     in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 == n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 == n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                     -- sin errores
                                     --let valor1 = evalIntExp exp1 estado
                                     --    valor2 = evalIntExp exp2 estado
@@ -290,10 +311,10 @@ evalBoolExp (Eq exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalBoolExp (Lt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
                                     in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 < n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 < n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                     -- sin errores
                                     --let valor1 = evalIntExp exp1 estado
                                     --    valor2 = evalIntExp exp2 estado
@@ -303,10 +324,10 @@ evalBoolExp (Lt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalBoolExp (Gt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
                                     in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 > n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 > n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                     -- sin errores
                                     --let valor1 = evalIntExp exp1 estado
                                     --    valor2 = evalIntExp exp2 estado
@@ -316,10 +337,10 @@ evalBoolExp (Gt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
 evalBoolExp (And exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                          valor2 = evalBoolExp exp2 estado
                                      in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 && n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 && n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                      -- sin errores
                                      --let valor1 = evalBoolExp exp1 estado
                                      --    valor2 = evalBoolExp exp2 estado
@@ -329,10 +350,10 @@ evalBoolExp (And exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
 evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                         valor2 = evalBoolExp exp2 estado
                                     in case valor1 of
-                                            Rigth n1 -> case valor2 of
-                                                            Rigth n2 -> Rigth (n1 || n2)
-                                                            error -> error
-                                            error -> error
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 || n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
                                     -- sin errores
                                     --let valor1 = evalBoolExp exp1 estado
                                     --    valor2 = evalBoolExp exp2 estado
@@ -340,8 +361,8 @@ evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
 
                                 -- con errores
 evalBoolExp (Not exp1) estado = case (evalBoolExp exp1 estado) of
-                                    Rigth b1 -> not b1
-                                    error -> error
+                                    Right b1 -> not b1
+                                    Left error -> Left error
                                 -- sin errores
                                 -- not (evalBoolExp exp1 estado)
 
