@@ -22,7 +22,7 @@ run ifile =
         case parseComm ifile s of
                                 Left error -> print error
                                 --Right t    -> print (eval t) --imprimir el resultado de evaluar.
-                                Right t    -> (writeFile "circuitoutput.tex" (snd (eval t) ))
+                                Right t    -> (writeFile "circuitoutput.tex"  (snd (unRight (eval t))))
         
         -- s <- shortLinesOnly "pruebalatex.tex"
         -- putStrLn "Leyendo...creando archivo"
