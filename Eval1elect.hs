@@ -99,7 +99,7 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                                                                                     Left error -> Left error 
                                                                 Left error -> Left error
                                             Left error -> Left error
-                                      
+                              
                               str2 = case xFinEval of
                                             Right x -> case yIni of
                                                             Right y -> Right (strLine (strCoord x y) (strCoord (x+2) y))
@@ -111,11 +111,13 @@ evalComm (CircExpr c) s = let xIni  = lookfor "coordX" s
                                                             Right y -> Right (strLine (strCoord (x+2) y) (strCoord (x+2) (y-2)))
                                                             Left error -> Left error
                                             Left error -> Left error
+
                               str4 = case xFinEval of
                                             Right x -> case yIni of
                                                             Right y -> Right (drawGND (x+2) (y-2))
                                                             Left error -> Left error
                                             Left error -> Left error
+
                               -- Cálculo de la resistencia total del circuito y armado del String
                               rtotal = msgRes (resistenciaTotal c)
                               -- Cálculo de la capacitancia del circuito y armado del String
@@ -146,7 +148,7 @@ evalComm' c s = case c of
                                                                                     Right yInitial -> Right (strLine (strCoord xInitial yInitial) (strCoord xInitial (yInitial-2)))
                                                                                     Left error -> Left error
                                                         Left error -> Left error 
-                                    
+                      
                                           -- Actualizo coordX y coordY antes de evaluar el siguiente 
                                           -- componente del paralelo
                                           s4 = case xFinEvalC1 of
@@ -163,7 +165,7 @@ evalComm' c s = case c of
                                                                                 Right yFinal -> Right (strLine (strCoord xInitial yFinal) (strCoord xInitial (yFinal-2)))
                                                                                 Left error -> Left error 
                                                         Left error -> Left error                        
-                                            
+
                                           -- Evaluación de c2
                                           s6 = evalComm' c2 s5
                                           xFinEvalC2  = lookfor "coordX" s6
@@ -171,10 +173,12 @@ evalComm' c s = case c of
                                           -- Linea horizontal en la linea de c2
                                           str4 = case xIni of
                                                         Right xInitial ->case yFinEvalC1 of
-                                                                                Right yFinal -> Right (strLine (strCoord xInitial (yFinal-2)) (strCoord (yFinal-2) (yFinal-2)))
+                                                                                Right yFinal -> case xFinEvalC1 of
+                                                                                                      Right xFinal -> Right (strLine (strCoord xInitial (yFinal-2)) (strCoord (xFinal-2) (yFinal-2)))
+                                                                                                      Left error -> Left error
                                                                                 Left error -> Left error 
                                                         Left error -> Left error  
-                                
+                                                                                      --str4 = strLine (strCoord xIni(xInitial) (yFinEvalC1(yFinal)-2)) (strCoord (xFinEvalC1(xFinal)-2) (yFinEvalC1-2))
                                           -- Linea horizontal en la linea de c1
                                           str5 = case xFinEvalC1 of
                                                         Right xF1 -> case yIni of 
