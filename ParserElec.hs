@@ -25,8 +25,8 @@ lis = makeTokenParser (emptyDef   { commentStart  = "/*"
                                                      "source", "parallel",
                                                      "serie", "voltmeter",
                                                      "ammeter", "ohmmeter",
-                                                     "resistance", "capacitor",
-                                                     "switch"]})
+                                                     "resistance", "capacitor",   -- emptycomp refiere a un componente vacio     
+                                                     "switch", "emptycomp", "emptycirc"]}) -- emptycirc refiere al circuito no inicializado
 ----------------------------------
 --- Parser de expressiones enteras
 -----------------------------------
@@ -116,32 +116,48 @@ comm2 = try (do reserved lis "skip"
                     reservedOp lis ":="
                     e <- intexp
                     return (Let str e))
-        <|> try (do c <- circexpr
-                    return (CircExpr c))
+        -- "(r1,c1,a1):==serie(paralello ) (resistance 4)"
+        <|> try (do char '('
+                    totalResistance <- identifier lis
+                    char ','
+                    totalCapacitance <- identifier lis
+                    char ','
+                    totalAmpere <- identifier lis
+                    char ')'
+                    reservedOp lis ":=="
+                    c <- circexpr EmptyCirc
+                    return (LetCirc totalResistance totalCapacitance totalAmpere c))
+
+        -- <|> try (do c <- circexpr EmptyCirc
+        --             return (CircExpr c))
         -- ver si es un circExpr y funciona o no
 
 -----------------------------------
 --- Parser de expresiones electronicas
 -----------------------------------
-circexpr :: Parser Circ
-circexpr = try (do reserved lis "serie"
-                   char '('
-                   c1 <- circexpr
-                   char ')'
-                   char '('
-                   c2 <- circexpr
-                   char ')'
-                   return (Serie c1 c2))
-           <|> try (do reserved lis "parallel"
-                       char '('
-                       c1 <- circexpr
-                       char ')'
-                       char '('
-                       c2 <- circexpr
-                       char ')'
-                       return (Parallel c1 c2))
-           <|> try (do c <- comp
-                       return (CompExpr c))
+circexpr :: Circ -> Parser Circ                   
+circexpr prev = try (do reserved lis "serie"
+                        char '('
+                        c1 <- circexpr prev
+                        char ')'
+                        char '('
+                        c2 <- circexpr prev
+                        char ')'
+                        return (Serie c1 c2))
+                <|> try (do reserved lis "parallel"
+                            char '('
+                            c1 <- circexpr prev
+                            char ')'
+                            char '('
+                            c2 <- circexpr prev
+                            char ')'
+                            return (Parallel c1 c2))
+                <|> try (do reserved lis "emptycirc"
+                            return (EmptyCirc))
+                <|> try (do co <- comp
+                            return (Add co prev))
+        
+        -----
                        
 comp :: Parser Comp
 comp    =  try (do reserved lis "resistance"
@@ -165,6 +181,8 @@ comp    =  try (do reserved lis "resistance"
            <|> try (do reserved lis "ohmmeter"
                        o <- intexp
                        return (Ohmmeter))
+           <|> try (do reserved lis "emptycomp"
+                       return (EmptyComp))
 --voltmeter", "ammeter", "ohmmeter
 ------------------------------------
 -- Funcion de parseo

@@ -27,18 +27,20 @@ data BoolExp = BTrue
 -- Comandos (sentencias)
 -- Observar que solo se permiten variables de un tipo (entero)
 data Comm = Skip
-          | Let NVar IntExp
+          | Let NVar IntExp -- 
+          | LetCirc NVar NVar NVar Circ 
           | Seq Comm Comm
           | Cond BoolExp Comm Comm
           | Repeat Comm BoolExp
-          | CircExpr Circ
+          -- | CircExpr Circ
  deriving (Show,Eq)
 
 -- Expresiones Electronicas
 data Circ = Serie Circ Circ
           | Parallel Circ Circ
-          | CompExpr Comp 
- deriving (Show,Eq)
+          | Add Comp Circ      -- Agregar Pol Comp Circ  ---- Data Pol = Neg | Pos   -- -- | CompExpr Comp 
+          | EmptyCirc          -- Circuito vacio
+ deriving (Show,Eq) 
 
 data Comp = Resistance IntExp
           | Capacitance IntExp
@@ -47,6 +49,7 @@ data Comp = Resistance IntExp
           | Voltmeter   -- Multimetro --
           | Amperemeter ----------------
           | Ohmmeter    ----------------
+          | EmptyComp   -- Componente vacio
  deriving (Show, Eq)
 
 
