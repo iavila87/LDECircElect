@@ -38,9 +38,11 @@ data Comm = Skip
 -- Expresiones Electronicas
 data Circ = Serie Circ Circ
           | Parallel Circ Circ
-          | Add Comp Circ      -- Agregar Pol Comp Circ  ---- Data Pol = Neg | Pos   -- -- | CompExpr Comp 
-          | EmptyCirc          -- Circuito vacio
+          | Add Pol Comp Circ      -- Agregar Pol Comp Circ  ---- Data Pol = Neg | Pos   -- -- | CompExpr Comp 
+          | EmptyCirc              -- Circuito vacio
  deriving (Show,Eq) 
+
+data Pol = Pos | Neg deriving (Show,Eq) -- indica la polaridad del componente
 
 data Comp = Resistance IntExp
           | Capacitance IntExp

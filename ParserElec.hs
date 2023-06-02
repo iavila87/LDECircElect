@@ -154,8 +154,12 @@ circexpr prev = try (do reserved lis "serie"
                             return (Parallel c1 c2))
                 <|> try (do reserved lis "emptycirc"
                             return (EmptyCirc))
-                <|> try (do co <- comp
-                            return (Add co prev))
+                <|> try (do char '+'                  --polaridad directa
+                            co <- comp
+                            return (Add Pos co prev))
+                <|> try (do char '-'                  --polaridad indirecta
+                            co <- comp
+                            return (Add Neg co prev))
         
         -----
                        
