@@ -7,74 +7,77 @@ import Control.Monad (guard)
 
 
 -- Estados
--- type State = [(NVar,Integer)]
-type State = ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estado del circuito
-
-
+-- type State = Either Error [(NVar,Integer)]
+data Error = UndefVar | DivByZero deriving (Show, Eq)
+type State = Either Error ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estado del circuito
 
 -- Estado inicial
 initState :: State
 initState = let s  = update "coordX" 0 ([],initStateCirc)
                 s' = update "coordY" 0 s
-            in s'
+            in Right s'
 
-
--- Cambia el valor de una variable en un estado
-updateCirc :: String -> State -> State
+-- Cambia el valor de una variable en un estado. Devuelve un estado sin Either
+updateCirc :: String -> ([(NVar,Integer)], StateCirc) -> ([(NVar,Integer)], StateCirc)
 updateCirc txt (s,"") = (s,txt)
 updateCirc txt (s,scirc) = (s,scirc ++ txt)
 
+-- Busca el valor de una variable en un estado
+lookfor :: NVar -> State -> Either Error Integer
+lookfor var (Right s) = lookfor' var s
 
--- Busca el valor de una variabl en un estado
--- Completar la definicion
-lookfor :: NVar -> State -> Integer
-lookfor var (((x,y):xs, sc))= if var == x then y
-                                          else lookfor var (xs,sc)
-
+lookfor' :: NVar -> ([(NVar,Integer)], StateCirc) -> Either Error Integer
+lookfor' var ([],sc) = Left UndefVar
+lookfor' var (((x,y):xs, sc))= if var == x then Right y
 
 -- Cambia el valor de una variable en un estado
--- Completar la definicion
-update :: NVar -> Integer -> State -> State
+update :: NVar -> Integer -> ([(NVar,Integer)], StateCirc) -> ([(NVar,Integer)], StateCirc)
 update var valor ([],sc) = ([(var,valor)],sc)
 update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
-                                          else ((x,y): fst (update var valor (xs,sc)),sc)
 
--- Evalua un programa en el estado nulo
+-- Evalúa un programa en el estado nulo
 eval :: Comm -> State
 eval p = evalComm p initState
 
--- Evalua un comando en un estado dado
--- Completar definicion
+-- Devuelve el contenido de un Right
+unRight (Right x) = x
+
+-- Evalúa un comando en un estado dado
 evalComm :: Comm -> State -> State
 evalComm Skip e = e
-evalComm (Let var expInt) estado = let valor = evalIntExp expInt estado
-                                       in update var valor estado
+evalComm (Let var expInt) s = let valor = evalIntExp expInt s
+                              in case valor of
+                                    Right v -> Right (update var v (unRight s))
+                                    Left error -> Left error
 
 evalComm (LetCirc varRes varCap varAmp expCirc) s = let s1 = evalCirc expCirc s
-                                                        restotal = case (resistenciaTotal expCirc) of
-                                                                      Nothing -> 0
-                                                                      Just x -> x
-                                                        s2 = update varRes restotal s1
+                                                        case s1 of 
+                                                          Right s -> restotal = case (resistenciaTotal expCirc) of
+                                                                                  Nothing -> 0
+                                                                                  Just x -> x
+                                                        s2 = Right (update varRes restotal (unRight s1))
                                                         captotal = case (capacidadTotal expCirc) of
-                                                                      Nothing -> 0
-                                                                      Just x -> x
-                                                        s3 = update varCap captotal s2
+                                                                        Nothing -> 0
+                                                                        Just x -> x
+                                                        s3 = Right (update varCap captotal (unRight s2))
                                                         amptotal = case (ampTotal (findSource expCirc) expCirc) of
                                                                       Nothing -> 0
                                                                       Just x -> x 
-                                                    in  update varAmp amptotal s3
+                                                    in Right (update varAmp amptotal (unRight s3))
 
 evalComm (Seq Skip c1) s = evalComm c1 s
 evalComm (Seq c1 c2) s = let s' = evalComm c1 s
                                   in evalComm (Seq Skip c2) s'
-evalComm (Cond b c1 c2) s = if (evalBoolExp b s )
-                                           then evalComm c1 s
-                                           else evalComm c2 s
+evalComm (Cond b c1 c2) s = let b1 = evalBoolExp b s
+                            in case b1 of
+                                Right True -> evalComm c1 s
+                                Right False -> evalComm c2 s 
+                                Left error -> Left error
 evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 
 
 -- evalComm para circuitos electronicos
-
+"""
 evalCirc c s = let xIni  = lookfor "coordX" s
                    yIni  = lookfor "coordY" s
                    s1 = evalComm' c s
@@ -95,88 +98,240 @@ evalCirc c s = let xIni  = lookfor "coordX" s
                    -- Actualizo y cierro la seccion de circuito de LATEX
                in updateCirc (str1 ++ str2 ++ str3 ++ str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s1
 
+"""
+--evalCirc con errores
+evalCirc c s =    let xIni  = lookfor "coordX" s
+                              yIni  = lookfor "coordY" s
+                              s1 = evalComm' c s
+                              -- Valores de coordenadas luego de evalComm'
+                              xFinEval = lookfor "coordX" s1
+                              yFinEval = lookfor "coordY" s1
+                              -- Cierre de circuito con el dibujo de GND
+                              str1 = case xFinEval of
+                                            Right n0 -> case yIni of
+                                                                Right n1-> case yFinEval of
+                                                                                    -- Decidimos agregar Right para no modificar retorno de strLine
+                                                                                    Right n2 -> Right (strLine (strCoord n0 n1) (strCoord (n0) n2))
+                                                                                    Left error -> Left error 
+                                                                Left error -> Left error
+                                            Left error -> Left error
+                              
+                              str2 = case xFinEval of
+                                            Right x -> case yIni of
+                                                            Right y -> Right (strLine (strCoord x y) (strCoord (x+2) y))
+                                                            Left error -> Left error
+                                            Left error -> Left error
 
+                              str3 = case xFinEval of
+                                            Right x -> case yIni of
+                                                            Right y -> Right (strLine (strCoord (x+2) y) (strCoord (x+2) (y-2)))
+                                                            Left error -> Left error
+                                            Left error -> Left error
+
+                              str4 = case xFinEval of
+                                            Right x -> case yIni of
+                                                            Right y -> Right (drawGND (x+2) (y-2))
+                                                            Left error -> Left error
+                                            Left error -> Left error
+
+                              -- Cálculo de la resistencia total del circuito y armado del String
+                              rtotal = msgRes (resistenciaTotal c)
+                              -- Cálculo de la capacitancia del circuito y armado del String
+                              captotal = msgCap (capacidadTotal c)
+                              -- Cálculo del amperaje del circuito y armado del String
+                              atotal = msgAmpere (ampTotal (findSource c) c)
+                              -- Actualizo y cierro la seccion de circuito de LATEX
+                  in case s1 of  
+                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s)
+                          Left error -> Left error
+
+--unRight para tipo de dato String
+uRs (Right s) = s
+
+--evalComm' con manejo de errores
 evalComm' :: Circ -> State -> State
 evalComm' c s = case c of
                     Serie c1 c2 -> let s1 = evalComm' c1 s
-                                       s2 = evalComm' c2 s1
-                                   in  s2
-                    
+                                   in  evalComm' c2 s1
+                          
                     Parallel c1 c2 -> let xIni  = lookfor "coordX" s
                                           yIni  = lookfor "coordY" s
-                                          -- Evaluacion de c1
+                                          -- Evaluación de c1
                                           s3 = evalComm' c1 s
                                           xFinEvalC1  = lookfor "coordX" s3
                                           yFinEvalC1  = lookfor "coordY" s3
-                                          -- linea vertical que une c1 con c2
-                                          str6 = strLine (strCoord xIni yIni) (strCoord xIni (yIni-2))
+                                          -- Línea vertical que une c1 con c2
+                                          str6 = case xIni of
+                                                        Right xInitial-> case yIni of
+                                                                                    Right yInitial -> Right (strLine (strCoord xInitial yInitial) (strCoord xInitial (yInitial-2)))
+                                                                                    Left error -> Left error
+                                                        Left error -> Left error 
+                      
                                           -- Actualizo coordX y coordY antes de evaluar el siguiente 
                                           -- componente del paralelo
-                                          s4 = update "coordX" (xFinEvalC1-2) s3
-                                          s5 = update "coordY" (yFinEvalC1-2) s4
-                                          -- linea vertical que une c1 con c2.
+                                          s4 = case xFinEvalC1 of
+                                                    Right n -> Right (update "coordX" (n-2) (unRight s3))
+                                                    Left error -> Left error
+                                          s5 = case yFinEvalC1 of
+                                                    Right n -> Right (update "coordY" (n-2) (unRight s4))
+                                                    Left error -> Left error
+                                          -- Línea vertical que une c1 con c2.
                                           -- Se actualiza para que no quede ninguna línea en blanco
-                                          str3 = strLine (strCoord xIni yFinEvalC1) (strCoord xIni (yFinEvalC1-2))
-                                          -- Evaluacion de c2
+                                          -- Línea vertical
+                                          str3 = case xIni of
+                                                        Right xInitial ->case yFinEvalC1 of
+                                                                                Right yFinal -> Right (strLine (strCoord xInitial yFinal) (strCoord xInitial (yFinal-2)))
+                                                                                Left error -> Left error 
+                                                        Left error -> Left error                        
+
+                                          -- Evaluación de c2
                                           s6 = evalComm' c2 s5
                                           xFinEvalC2  = lookfor "coordX" s6
                                           yFinEvalC2  = lookfor "coordY" s6
                                           -- Linea horizontal en la linea de c2
-                                          str4 = strLine (strCoord xIni (yFinEvalC1-2)) (strCoord (xFinEvalC1-2) (yFinEvalC1-2))
+                                          str4 = case xIni of
+                                                        Right xInitial ->case yFinEvalC1 of
+                                                                                Right yFinal -> case xFinEvalC1 of
+                                                                                                      Right xFinal -> Right (strLine (strCoord xInitial (yFinal-2)) (strCoord (xFinal-2) (yFinal-2)))
+                                                                                                      Left error -> Left error
+                                                                                Left error -> Left error 
+                                                        Left error -> Left error  
+                                                                                      --str4 = strLine (strCoord xIni(xInitial) (yFinEvalC1(yFinal)-2)) (strCoord (xFinEvalC1(xFinal)-2) (yFinEvalC1-2))
                                           -- Linea horizontal en la linea de c1
-                                          str5 = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC2 yIni)
-                                          -- 
-                                          str7a = strLine (strCoord xFinEvalC1 yIni) (strCoord xFinEvalC1 yFinEvalC2)
-                                          str7b = strLine (strCoord xFinEvalC2 yFinEvalC2) (strCoord xFinEvalC2 yFinEvalC1)
-                                          
-                                      in if (isX1Mayor xFinEvalC1 xFinEvalC2) then
-                                            updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7a) s6
-                                         else
-                                            updateCirc (str3 ++ str4 ++ str5 ++ str6 ++ str7b) s6
+                                          str5 = case xFinEvalC1 of
+                                                        Right xF1 -> case yIni of 
+                                                                            Right yInitial -> case xFinEvalC2 of 
+                                                                                                    Right xF2 -> Right (strLine (strCoord xF1 yInitial) (strCoord xF2 yInitial))
+                                                                                                    Left error -> Left error
+                                                                            Left error -> Left error
+                                                        Left error -> Left error
+                                          -- linea vertical
+                                          str7a = case xFinEvalC1 of 
+                                                            Right xfE -> case yIni of 
+                                                                                Right yInitial-> case yFinEvalC2 of 
+                                                                                                      Right yfE -> Right (strLine (strCoord xfE yInitial) (strCoord xfE yfE))
+                                                                                                      Left error -> Left error
+                                                                                Left error -> Left error
+                                                            Left error -> Left error 
+                                            
+                                        
+                                          str7b =case xFinEvalC2 of 
+                                                            Right xfE -> case yFinEvalC2 of 
+                                                                                Right yfE2-> case yFinEvalC1 of 
+                                                                                                      Right yfE1 -> Right (strLine (strCoord xfE yfE2) (strCoord xfE yfE1))
+                                                                                                      Left error -> Left error
+                                                                                Left error -> Left error
+                                                            Left error -> Left error 
+                                        
+                                          -- Comparando coordenadas según longitud del paralelo.
+                                      in case xFinEvalC1 of
+                                                Right c1 -> case xFinEvalC2 of
+                                                                    Right c2 -> if (c1 > c2) then
+                                                                                    Right (updateCirc (uRs str3 ++ uRs str4 ++ uRs str5 ++ uRs str6 ++ uRs str7a) (unRight s6))
+                                                                                else
+                                                                                    Right (updateCirc (uRs str3 ++ uRs str4 ++ uRs str5 ++ uRs str6 ++ uRs str7b) (unRight s6)) 
+                                                                    Left error -> Left error
+                                                Left error -> Left error
                     
-                    
-                    Add (Source (Const n)) c -> let x  = lookfor "coordX" s
-                                                    y  = lookfor "coordY" s
-                                                    s1 = update "coordX" (x+2) s
-                                                    s2 = update "coordY" y s1
-                                                    --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
-                                                    str1 = drawSource x y n 
-                                                    str2 = strLine (strCoord x y) (strCoord (x+2) y)
-                                                    str3 = drawGND x (y-2)
-                                                in  updateCirc (str1++str2++str3) s2 --(str1 ++ str2 ++ str3, s2)
+                    -- Empiezo a dibujar los componentes
+                    CompExpr (Source (Const n)) -> let x  = lookfor "coordX" s
+                                                       y  = lookfor "coordY" s
+                                                       s1 = case x of
+                                                                    Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                                    Left error -> Left error
+                                                       s2 = case y of 
+                                                                 Right n ->Right (update "coordY" n (unRight s1))
+                                                                 Left error -> Left error
+                                                       --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
+                                                       str1 =  case x of 
+                                                                    Right x1-> case y of
+                                                                                    Right y1-> Right (drawSource x1 y1 n)
+                                                                                    Left error -> Left error
+                                                                    Left error -> Left error
+                                                       str2 = case x of 
+                                                                    Right x1-> case y of
+                                                                                    Right y1-> Right (strLine (strCoord x1 y1) (strCoord (x1+2) y1))
+                                                                                    Left error -> Left error
+                                                                    Left error -> Left error
+                                                        
+                                                       str3 = case x of 
+                                                                    Right x1-> case y of
+                                                                                    Right y1-> Right(drawGND x1 (y1-2))
+                                                                                    Left error -> Left error
+                                                                    Left error -> Left error
+                                                        
+                                                       -- Actualizo el string de latex
+                                                   in  Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
 
-                    Add Voltmeter c ->  let x  = lookfor "coordX" s
-                                            y  = lookfor "coordY" s
-                                            s1 = update "coordX" (x+2) s
-                                            s2 = update "coordY" y s1
-                                            str1 = strLine (strCoord x y) (strCoord (x+2) y)
-                                            str2 = drawVoltimeter (x+1) y
-                                            str3 = drawGND (x +1)(y-2)
-                                        in  updateCirc (str1++str2++str3) s2
-
-                    Add Amperemeter c ->  let x  = lookfor "coordX" s
+                    CompExpr Voltmeter -> let x  = lookfor "coordX" s
                                               y  = lookfor "coordY" s
-                                              -- Actualizo coordenadas para dibujar el próximo componente
-                                              s1 = update "coordX" (x+2) s
-                                              s2 = update "coordY" (y) s1
-                                              --Dibujo amperímetro desde coordenadas iniciales
-                                              str1 = drawAmperemeter x y
-                                              --Actualizo string de Latex
-                                          in  updateCirc (str1) s2
+                                              s1 = case x of 
+                                                        Right n-> Right (update "coordX" (n+2) (unRight s))
+                                                        Left error -> Left error
+                                              s2 = case y of
+                                                        Right n-> Right (update "coordY" n (unRight s1))
+                                                        Left error -> Left error
+                                              str1 =  case x of 
+                                                           Right x1-> case y of
+                                                                           Right y1-> Right (strLine (strCoord x1 y1) (strCoord (x1+2) y1))
+                                                                           Left error -> Left error
+                                                           Left error -> Left error
+                                                
+                                                
+                                                
+                                              str2 = case x of 
+                                                           Right x1-> case y of
+                                                                           Right y1-> Right (drawVoltimeter (x1+1) y1)
+                                                                           Left error -> Left error
+                                                           Left error -> Left error
+                                                
+                                              str3 = case x of 
+                                                           Right x1-> case y of
+                                                                           Right y1-> Right  (drawGND (x1 +1)(y1-2))
+                                                                           Left error -> Left error
+                                                           Left error -> Left error
+                                            
+                                          in  Right (updateCirc ( uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
 
-                    Add c1 c -> let x  = lookfor "coordX" s
-                                    y  = lookfor "coordY" s
-                                    s1 = update "coordX" (x+2) s
-                                    s2 = update "coordY" (y) s1
-                                    --Dibujo componente desde coordenadas iniciales
-                                    str1 = drawComponent x y c1 
-                                    --Actualizo string de Latex
-                                in  updateCirc (str1) s2
+                    CompExpr Amperemeter -> let x  = lookfor "coordX" s
+                                                y  = lookfor "coordY" s
+                                                -- Actualizo coordenadas para dibujar el próximo componente
+                                                s1 = case x of 
+                                                            Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                            Left error -> Left error
+                                                s2 = case y of 
+                                                            Right n -> Right (update "coordY" (n) (unRight s1))
+                                                            Left error -> Left error
+                                                --Dibujo amperímetro desde coordenadas iniciales
+                                                str1 = case x of
+                                                            Right n -> case y of 
+                                                                            Right n1 -> Right (drawAmperemeter n n1)
+                                                                            Left error -> Left error
+                                                            Left error -> Left error
+                                                --Actualizo string de Latex
+                                            in  Right (updateCirc (uRs str1) (unRight s2))
 
--- Funcion que retorna un string para dibujar una linea en Latex
+                    CompExpr c1 -> let x  = lookfor "coordX" s
+                                       y  = lookfor "coordY" s
+                                       s1 = case x of
+                                                    Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                    Left error -> Left error
+                                       s2 = case y of 
+                                                    Right n -> Right (update "coordY" (n) (unRight s1))
+                                                    Left error -> Left error
+                                       --Dibujo componente desde coordenadas iniciales
+                                       str1 = case x of
+                                                    Right x1 -> case y of
+                                                                        Right y1 -> Right (drawComponent x1 y1 c1)
+                                                                        Left error -> Left error
+                                                    Left error -> Left error
+                                       --Actualizo String de Latex
+                                   in  Right (updateCirc (uRs str1) (unRight s2))
+
+-- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
 
--- Funcion que devuelve el mayor
+-- Función que devuelve el mayor
 isX1Mayor :: Ord a => a -> a -> Bool
 isX1Mayor n m = if n < m then False else True
 --
@@ -222,54 +377,92 @@ drawAmperemeter x y = "\\draw" ++ (strCoord (x) y) ++ (strComp (Add Amperemeter 
 drawComponent x y c= "\\draw" ++ (strCoord (x) y) ++ (strComp (Add c EmptyCirc)) ++ (strCoord (x +2) y) ++ ";\n"
 
 -- Evalúa una expresión entera
--- Completar definición
-evalIntExp :: IntExp -> State -> Integer
-evalIntExp (Const valor) estado = valor
+evalIntExp :: IntExp -> State -> Either Error Integer
+evalIntExp (Const valor) estado = Right valor
 evalIntExp (Var variable) estado = lookfor variable estado
 evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
-                                    in (-valor)
+                                    in case valor of
+                                        Right n -> Right (-n)
+                                        Left error -> Left error
 evalIntExp (Plus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                          valor2 = evalIntExp exp2 estado
-                                         in valor1 + valor2
+                                     in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 + n2)
+                                                            Left error -> Left error
+                                            Left error
 
 evalIntExp (Minus exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
-                                          in valor1 - valor2
+                                      in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 - n2)
+                                                            Left error -> Left error
+                                            Left err
 evalIntExp (Times exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                           valor2 = evalIntExp exp2 estado
-                                          in valor1 * valor2
+                                      in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 * n2)
+                                                            Left error -> Left error
+                                            Left err
 evalIntExp (Div exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in div valor1 valor2
+                                    in case valor1 of
+                                                Right n1 -> case valor2 of
+                                                                    Right 0 -> Left DivByZero
+                                                                    Right n2 -> Right (div n1 n2)
 
 
--- Evalua una expresion entera
--- Completar definicion
-evalBoolExp :: BoolExp -> State -> Bool
-evalBoolExp BTrue estado = True
-evalBoolExp BFalse estado = False
+-- Evalua una expresión booleana
+
+evalBoolExp :: BoolExp -> State -> Either Error Bool
+evalBoolExp BTrue estado = Right True
+evalBoolExp BFalse estado = Right False
 evalBoolExp (Eq exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 == valor2
+                                    in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 == n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
 
 evalBoolExp (Lt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 < valor2
+                                    in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 < n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
 
 evalBoolExp (Gt exp1 exp2) estado = let valor1 = evalIntExp exp1 estado
                                         valor2 = evalIntExp exp2 estado
-                                        in valor1 > valor2
+                                    in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 > n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
 
 evalBoolExp (And exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                          valor2 = evalBoolExp exp2 estado
-                                        in valor1 && valor2
+                                     in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 && n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error
 
 evalBoolExp (Or exp1 exp2) estado = let valor1 = evalBoolExp exp1 estado
                                         valor2 = evalBoolExp exp2 estado
-                                        in valor1 || valor2
-evalBoolExp (Not exp1) estado = not (evalBoolExp exp1 estado)
-
-
+                                    in case valor1 of
+                                            Right n1 -> case valor2 of
+                                                            Right n2 -> Right (n1 || n2)
+                                                            Left error -> Left error
+                                            Left error -> Left error 
+evalBoolExp (Not exp1) estado =     let b = evalBoolExp exp1 estado
+                                    in case b of
+                                            Right b1 -> Right (not b1)
+                                            Left error -> Left error
+                                            
 -- Defino la función para calcular la resistencia total de un circuito. Usamos tipo de dato Maybe para contemplar errores
 resistenciaTotal :: Circ -> Maybe Integer
 resistenciaTotal (Serie circ1 circ2) = do
