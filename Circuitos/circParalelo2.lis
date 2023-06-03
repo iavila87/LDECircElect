@@ -1,1 +1,1 @@
-parallel (parallel (resistance 42)(resistance 68))(resistance 56);skip
+(r,c,a):==parallel (parallel (+resistance 42)(+resistance 68))(+resistance 56);skip
