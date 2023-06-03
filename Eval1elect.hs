@@ -7,7 +7,7 @@ import Control.Monad (guard)
 
 -- Estados
 -- type State = Either Error [(NVar,Integer)]
-data Error = UndefVar | DivByZero deriving (Show, Eq)
+data Error = UndefVar | DivByZero | NegativeValue deriving (Show, Eq)
 type State = Either Error ([(NVar,Integer)], StateCirc) ---- cambios para introducir el estado del circuito
 
 -- Estado inicial
@@ -210,34 +210,35 @@ evalComm' c s = case c of
                                                 Left error -> Left error
                     
                     -- Empiezo a dibujar los componentes
-                    Add pol (Source (Const n)) c -> let x  = lookfor "coordX" s
-                                                        y  = lookfor "coordY" s
-                                                        s1 = case x of
-                                                                    Right n -> Right (update "coordX" (n+2) (unRight s))
-                                                                    Left error -> Left error
-                                                        s2 = case y of 
-                                                                 Right n ->Right (update "coordY" n (unRight s1))
-                                                                 Left error -> Left error
-                                                        --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
-                                                        str1 =  case x of 
-                                                                    Right x1-> case y of
-                                                                                    Right y1-> Right (drawSource x1 y1 n pol)
-                                                                                    Left error -> Left error
-                                                                    Left error -> Left error
-                                                        str2 = case x of 
-                                                                    Right x1-> case y of
-                                                                                    Right y1-> Right (strLine (strCoord x1 y1) (strCoord (x1+2) y1))
-                                                                                    Left error -> Left error
-                                                                    Left error -> Left error
-                                                        
-                                                        str3 = case x of 
-                                                                    Right x1-> case y of
-                                                                                    Right y1-> Right(drawGND x1 (y1-2))
-                                                                                    Left error -> Left error
-                                                                    Left error -> Left error
-                                                        
-                                                        -- Actualizo el string de latex
-                                                    in  Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
+                    Add pol (Source (Const n)) c -> if componentNegValue (Source (Const n)) then Left NegativeValue 
+                                                    else let x  = lookfor "coordX" s
+                                                                y  = lookfor "coordY" s
+                                                                s1 = case x of
+                                                                            Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                                            Left error -> Left error
+                                                                s2 = case y of 
+                                                                        Right n ->Right (update "coordY" n (unRight s1))
+                                                                        Left error -> Left error
+                                                                --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
+                                                                str1 =  case x of 
+                                                                            Right x1-> case y of
+                                                                                            Right y1-> Right (drawSource x1 y1 n pol)
+                                                                                            Left error -> Left error
+                                                                            Left error -> Left error
+                                                                str2 = case x of 
+                                                                            Right x1-> case y of
+                                                                                            Right y1-> Right (strLine (strCoord x1 y1) (strCoord (x1+2) y1))
+                                                                                            Left error -> Left error
+                                                                            Left error -> Left error
+                                                                
+                                                                str3 = case x of 
+                                                                            Right x1-> case y of
+                                                                                            Right y1-> Right(drawGND x1 (y1-2))
+                                                                                            Left error -> Left error
+                                                                            Left error -> Left error
+                                                                
+                                                                -- Actualizo el string de latex
+                                                            in  Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
 
                     Add pol Voltmeter c ->  let x  = lookfor "coordX" s
                                                 y  = lookfor "coordY" s
@@ -306,22 +307,23 @@ evalComm' c s = case c of
                                                 --Actualizo string de Latex
                                             in  Right (updateCirc (uRs str1) (unRight s2))
 
-                    Add pol c1 c -> let x  = lookfor "coordX" s
-                                        y  = lookfor "coordY" s
-                                        s1 = case x of
-                                                    Right n -> Right (update "coordX" (n+2) (unRight s))
-                                                    Left error -> Left error
-                                        s2 = case y of 
-                                                    Right n -> Right (update "coordY" (n) (unRight s1))
-                                                    Left error -> Left error
-                                        --Dibujo componente desde coordenadas iniciales
-                                        str1 = case x of
-                                                    Right x1 -> case y of
-                                                                        Right y1 -> Right (drawComponent x1 y1 c1 pol)
-                                                                        Left error -> Left error
-                                                    Left error -> Left error
-                                        --Actualizo String de Latex
-                                    in  Right (updateCirc (uRs str1) (unRight s2))
+                    Add pol c1 c ->     if componentNegValue c1 then Left NegativeValue
+                                        else let x  = lookfor "coordX" s
+                                                 y  = lookfor "coordY" s
+                                                 s1 = case x of
+                                                        Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                        Left error -> Left error
+                                                 s2 = case y of 
+                                                        Right n -> Right (update "coordY" (n) (unRight s1))
+                                                        Left error -> Left error
+                                            --Dibujo componente desde coordenadas iniciales
+                                                 str1 = case x of
+                                                             Right x1 -> case y of
+                                                                              Right y1 -> Right (drawComponent x1 y1 c1 pol)
+                                                                              Left error -> Left error
+                                                             Left error -> Left error
+                                            --Actualizo String de Latex
+                                             in  Right (updateCirc (uRs str1) (unRight s2))
 
 -- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
@@ -565,5 +567,12 @@ findSource (Add _ c _) = case c of
                                _ -> 0
 findSource (Serie l r) = findSource l
 findSource (Parallel l r) = findSource l
+
+-- Función para saber si un valor es negativo
+componentNegValue::Comp-> Bool
+componentNegValue Resistance (Const x) = if x < 0 then True else False
+componentNegValue Capacitance (Const x) = if x < 0 then True else False
+componentNegValue Souce (Const x) = if x < 0 then True else False
+componentNegValue _ = False
 
 
