@@ -54,15 +54,21 @@ evalComm (LetCirc varRes varCap varAmp expCirc) s = let s1 = evalCirc expCirc s
                                                                       Right s -> case (resistenciaTotal expCirc) of
                                                                                      Nothing -> 0
                                                                                      Just x -> x
-                                                        s2 = Right (update varRes restotal (unRight s1))
+                                                        s2 = case s1 of
+                                                                Right s1'-> Right (update varRes restotal s1')
+                                                                Left error -> Left error
                                                         captotal = case (capacidadTotal expCirc) of
                                                                         Nothing -> 0
                                                                         Just x -> x
-                                                        s3 = Right (update varCap captotal (unRight s2))
+                                                        s3 = case s2 of
+                                                                Right s2' -> Right (update varCap captotal s2')
+                                                                Left error -> Left error
                                                         amptotal = case (ampTotal (findSource expCirc) expCirc) of
                                                                       Nothing -> 0
                                                                       Just x -> x 
-                                                    in Right (update varAmp amptotal (unRight s3))
+                                                    in case s3 of
+                                                        Right s3' -> Right (update varAmp amptotal s3')
+                                                        Left error -> Left error
 
 evalComm (Seq Skip c1) s = evalComm c1 s
 evalComm (Seq c1 c2) s = let s' = evalComm c1 s
@@ -130,12 +136,20 @@ evalComm' c s = case c of
                     Serie c1 c2 -> let s1 = evalComm' c1 s
                                    in  evalComm' c2 s1
                           
-                    Parallel c1 c2 -> let xIni  = lookfor "coordX" s
-                                          yIni  = lookfor "coordY" s
+                    Parallel c1 c2 -> let xIni  = case s of 
+                                                       Right s' ->lookfor "coordX" s
+                                                       Left error -> Left error
+                                          yIni  = case s of 
+                                                       Right s' ->lookfor "coordY" s
+                                                       Left error -> Left error
                                           -- Evaluación de c1
                                           s3 = evalComm' c1 s
-                                          xFinEvalC1  = lookfor "coordX" s3
-                                          yFinEvalC1  = lookfor "coordY" s3
+                                          xFinEvalC1  = case s3 of
+                                                             Right s3'-> lookfor "coordX" s3
+                                                             Left error -> Left error
+                                          yFinEvalC1  = case s3 of 
+                                                             Right s3' ->lookfor "coordY" s3
+                                                             Left error -> Left error
                                           -- Línea vertical que une c1 con c2
                                           str6 = case xIni of
                                                         Right xInitial-> case yIni of
@@ -211,13 +225,16 @@ evalComm' c s = case c of
                     
                     -- Empiezo a dibujar los componentes
                     Add pol (Source (Const n)) c -> if componentNegValue (Source (Const n)) then Left NegativeValue 
-                                                    else let x  = lookfor "coordX" s
+                                                    else let    x  = lookfor "coordX" s
                                                                 y  = lookfor "coordY" s
                                                                 s1 = case x of
-                                                                            Right n -> Right (update "coordX" (n+2) (unRight s))
+                                                                            Right n -> case s of
+                                                                                         Right s' -> Right (update "coordX" (n+2) s')
+                                                                                         Left error -> Left error
                                                                             Left error -> Left error
                                                                 s2 = case y of 
-                                                                        Right n ->Right (update "coordY" n (unRight s1))
+                                                                        Right n -> case s1 of
+                                                                                        Right s1' -> Right (update "coordY" n s1')
                                                                         Left error -> Left error
                                                                 --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
                                                                 str1 =  case x of 
@@ -238,7 +255,9 @@ evalComm' c s = case c of
                                                                             Left error -> Left error
                                                                 
                                                                 -- Actualizo el string de latex
-                                                            in  Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
+                                                            in  case s2 of
+                                                                        Right s2' -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) s2')
+                                                                        Left error -> Left error
 
                     Add pol Voltmeter c ->  let x  = lookfor "coordX" s
                                                 y  = lookfor "coordY" s
@@ -277,7 +296,7 @@ evalComm' c s = case c of
                                                             Right n -> Right (update "coordX" (n+2) (unRight s))
                                                             Left error -> Left error
                                                     s2 = case y of 
-                                                            Right n -> Right (update "coordY" (n) (unRight s1))
+                                                            Right n -> Right (update "coordY" n (unRight s1))
                                                             Left error -> Left error
                                                     --Dibujo amperímetro desde coordenadas iniciales
                                                     str1 = case x of
@@ -308,22 +327,32 @@ evalComm' c s = case c of
                                             in  Right (updateCirc (uRs str1) (unRight s2))
 
                     Add pol c1 c ->     if componentNegValue c1 then Left NegativeValue
-                                        else let x  = lookfor "coordX" s
-                                                 y  = lookfor "coordY" s
-                                                 s1 = case x of
-                                                        Right n -> Right (update "coordX" (n+2) (unRight s))
+                                        else let x  = case s of --------------------------------------------
+                                                        Right s' -> lookfor "coordX" s  
                                                         Left error -> Left error
-                                                 s2 = case y of 
-                                                        Right n -> Right (update "coordY" (n) (unRight s1))
+                                                 y  = case s of --------------------------------------------
+                                                        Right s' -> lookfor "coordY" s 
                                                         Left error -> Left error
-                                            --Dibujo componente desde coordenadas iniciales
+                                                 s1 = case s of ------
+                                                        Right s' -> case x of
+                                                                        Right n -> Right (update "coordX" (n+2) s')
+                                                                        Left error -> Left error
+                                                        Left error -> Left error
+                                                 s2 = case s1 of ------
+                                                        Right s1' -> case y of 
+                                                                        Right n -> Right (update "coordY" n s1')
+                                                                        Left error -> Left error
+                                                        Left error -> Left error
+                                                 --Dibujo componente desde coordenadas iniciales
                                                  str1 = case x of
                                                              Right x1 -> case y of
                                                                               Right y1 -> Right (drawComponent x1 y1 c1 pol)
                                                                               Left error -> Left error
                                                              Left error -> Left error
-                                            --Actualizo String de Latex
-                                             in  Right (updateCirc (uRs str1) (unRight s2))
+                                             --Actualizo String de Latex
+                                             in case s2 of
+                                                        Right s2' -> Right (updateCirc (uRs str1) s2')
+                                                        Left error -> Left error
 
 -- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
@@ -533,20 +562,6 @@ msgCap ct= case ct of
             Nothing ->"\\\\\\\\No se puede calcular la capacitancia del circuito.\n"
             Just c -> "\\\\\\\\La capacitancia del circuito es de " ++ (cnv c) ++ " uF.\n"
 
-{-
--- Detecta si es un capacitor el componente
-isCapacitor c = case c of 
-                    CompExpr (Capacitance x) -> True
-                    CompExpr x -> False
-                        
--- Busca si hay un capacitor en el circuito
-findCap :: Circ -> Bool
-findCap c = case c of 
-                    CompExpr (Capacitance x) -> True
-                    CompExpr x -> False
-                    Serie c1 c2 -> (findCap c1) || (findCap c2)
-                    Parallel c1 c2 -> (findCap c1) || (findCap c2)
--}
 
 -- Calculo de la intensidad total del circuito.
 --Intensidad= Tensión/ resistencia
@@ -570,9 +585,9 @@ findSource (Parallel l r) = findSource l
 
 -- Función para saber si un valor es negativo
 componentNegValue::Comp-> Bool
-componentNegValue Resistance (Const x) = if x < 0 then True else False
-componentNegValue Capacitance (Const x) = if x < 0 then True else False
-componentNegValue Souce (Const x) = if x < 0 then True else False
+componentNegValue (Resistance (UMinus x)) = True
+componentNegValue (Capacitance (UMinus x)) = True
+componentNegValue (Source (UMinus x)) = True
 componentNegValue _ = False
 
 
