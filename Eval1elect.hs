@@ -51,19 +51,19 @@ evalComm (Let var expInt) s = let valor = evalIntExp expInt s
 
 evalComm (LetCirc varRes varCap varAmp expCirc) s = let s1 = evalCirc expCirc s
                                                         restotal = case s1 of 
-                                                                      Right s -> case (resistenciaTotal expCirc) of
+                                                                      Right s -> case (resistenciaTotal expCirc s1) of
                                                                                      Nothing -> 0
                                                                                      Just x -> x
                                                         s2 = case s1 of
                                                                 Right s1'-> Right (update varRes restotal s1')
                                                                 Left error -> Left error
-                                                        captotal = case (capacidadTotal expCirc) of
+                                                        captotal = case (capacidadTotal expCirc s2) of
                                                                         Nothing -> 0
                                                                         Just x -> x
                                                         s3 = case s2 of
                                                                 Right s2' -> Right (update varCap captotal s2')
                                                                 Left error -> Left error
-                                                        amptotal = case (ampTotal (findSource expCirc) expCirc) of
+                                                        amptotal = case (ampTotal (findSource expCirc) expCirc s3) of
                                                                       Nothing -> 0
                                                                       Just x -> x 
                                                     in case s3 of
@@ -117,11 +117,11 @@ evalCirc c s =    let xIni  = lookfor "coordX" s
                                 Left error -> Left error
 
                       -- Cálculo de la resistencia total del circuito y armado del String
-                      rtotal = msgRes (resistenciaTotal c)
+                      rtotal = msgRes (resistenciaTotal c s1)
                       -- Cálculo de la capacitancia del circuito y armado del String
-                      captotal = msgCap (capacidadTotal c)
+                      captotal = msgCap (capacidadTotal c s1)
                       -- Cálculo del amperaje del circuito y armado del String
-                      atotal = msgAmpere (ampTotal (findSource c) c)
+                      atotal = msgAmpere (ampTotal (findSource c) c s1)
                       -- Actualizo y cierro la seccion de circuito de LATEX
                   in case s1 of  
                           Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s)
@@ -327,32 +327,43 @@ evalComm' c s = case c of
                                             in  Right (updateCirc (uRs str1) (unRight s2))
 
                     Add pol c1 c ->     if componentNegValue c1 then Left NegativeValue
-                                        else let x  = case s of --------------------------------------------
+                                        else let x  = case s of
                                                         Right s' -> lookfor "coordX" s  
                                                         Left error -> Left error
-                                                 y  = case s of --------------------------------------------
+                                                 y  = case s of
                                                         Right s' -> lookfor "coordY" s 
                                                         Left error -> Left error
-                                                 s1 = case s of ------
+                                                 s1 = case s of
                                                         Right s' -> case x of
                                                                         Right n -> Right (update "coordX" (n+2) s')
                                                                         Left error -> Left error
                                                         Left error -> Left error
-                                                 s2 = case s1 of ------
+                                                 s2 = case s1 of
                                                         Right s1' -> case y of 
                                                                         Right n -> Right (update "coordY" n s1')
                                                                         Left error -> Left error
                                                         Left error -> Left error
+                                                 
+                                                 -- Extrae el valor de un componente
+                                                 intcomp = valComp c1 s2
+
                                                  --Dibujo componente desde coordenadas iniciales
                                                  str1 = case x of
                                                              Right x1 -> case y of
-                                                                              Right y1 -> Right (drawComponent x1 y1 c1 pol)
+                                                                              Right y1 -> case intcomp of
+                                                                                                Right val -> Right (drawComponent x1 y1 c1 pol val)
+                                                                                                Left error -> Left error
                                                                               Left error -> Left error
                                                              Left error -> Left error
                                              --Actualizo String de Latex
                                              in case s2 of
                                                         Right s2' -> Right (updateCirc (uRs str1) s2')
                                                         Left error -> Left error
+
+-- Función que retorna el valor contenido en un componente
+valComp comp s = case comp of
+                        Resistance v -> evalIntExp v s
+                        Capacitance v -> evalIntExp v s
 
 -- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
@@ -368,46 +379,46 @@ cnv n = show n
 strCoord :: (Show a1, Show a2) => a1 -> a2 -> [Char]
 strCoord x y = " ("++ (cnv x) ++","++ (cnv y) ++") "
 
-strComp :: Comp -> [Char]
-strComp (Resistance (Const r)) = ("to[R={" ++ (show r) ++ "}{ ohm},-]")
+strComp :: Comp -> Integer -> [Char]
+strComp (Resistance v) r = ("to[R={" ++ (show r) ++ "}{ ohm},-]")
 
-strComp (Capacitance (Const ca)) = ("to[C={" ++ (show ca) ++ "}{ uF},-]")
+strComp (Capacitance v) c = ("to[C={" ++ (show c) ++ "}{ uF},-]")
 
-strComp Ohmmeter = "to[ohmmeter]"
+strComp Ohmmeter o = "to[ohmmeter]"
 
-strComp Amperemeter = "to [rmeterwa, t=A, i=$i$]"
+strComp Amperemeter a = "to [rmeterwa, t=A, i=$i$]"
 
-strComp Voltmeter = "to[rmeterwa, t=V, v=$v$]"
+strComp Voltmeter v = "to[rmeterwa, t=V, v=$v$]"
 
-strComp (Switch BTrue) = "to[ccsw, -, name=s1]"
+strComp (Switch BTrue) v = "to[ccsw, -, name=s1]"
 
-strComp (Switch BFalse) = "to[cosw, -, name=s1]"
+strComp (Switch BFalse) v = "to[cosw, -, name=s1]"
 
-strComp (Source (Const r)) = "to[battery1={" ++ (show r) ++ "}{V}]"
+strComp (Source (Const r)) v = "to[battery1={" ++ (show r) ++ "}{V}]"
 
 --Función para devolver concatenado el string que dibuja en GND
 drawGND x y = "\\draw" ++ (strCoord x y) ++ gndCirc ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja la Source
 drawSource x y n pol = case pol of
-                          Pos -> "\\draw" ++ (strCoord x y) ++ (strComp (Source (Const n))) ++ (strCoord x (y-2)) ++ ";\n"
-                          Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp (Source (Const n))) ++ (strCoord x y) ++ ";\n"
+                          Pos -> "\\draw" ++ (strCoord x y) ++ (strComp (Source (Const n)) 0) ++ (strCoord x (y-2)) ++ ";\n"
+                          Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp (Source (Const n)) 0) ++ (strCoord x y) ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja el Voltímetro
 
 drawVoltimeter x y pol = case pol of
-                            Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Voltmeter) ++ (strCoord x (y-2)) ++ ";\n"
-                            Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp Voltmeter) ++ (strCoord x y) ++ ";\n"
+                            Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Voltmeter 0) ++ (strCoord x (y-2)) ++ ";\n"
+                            Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp Voltmeter 0) ++ (strCoord x y) ++ ";\n"
 --Función para devolver concatenado el string que dibuja el Amperímetro
   
 drawAmperemeter x y pol = case pol of
-                            Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Amperemeter) ++ (strCoord (x+2) y) ++ ";\n"
-                            Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp Amperemeter) ++ (strCoord x y) ++ ";\n"
+                            Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Amperemeter 0) ++ (strCoord (x+2) y) ++ ";\n"
+                            Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp Amperemeter 0) ++ (strCoord x y) ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja el Componente
-drawComponent x y c pol = case pol of
-                            Pos -> "\\draw" ++ (strCoord x y) ++ (strComp c) ++ (strCoord (x+2) y) ++ ";\n"
-                            Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp c) ++ (strCoord x y) ++ ";\n"
+drawComponent x y c pol val = case pol of
+                                Pos -> "\\draw" ++ (strCoord x y) ++ (strComp c val) ++ (strCoord (x+2) y) ++ ";\n"
+                                Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp c val) ++ (strCoord x y) ++ ";\n"
 
 -- Evalúa una expresión entera
 evalIntExp :: IntExp -> State -> Either Error Integer
@@ -502,28 +513,30 @@ evalBoolExp (Not exp1) estado =     let b = evalBoolExp exp1 estado
                                             Left error -> Left error
                                             
 -- Defino la función para calcular la resistencia total de un circuito. Usamos tipo de dato Maybe para contemplar errores
-resistenciaTotal :: Circ -> Maybe Integer
-resistenciaTotal (Serie circ1 circ2) = do
-  r1 <- resistenciaTotal circ1
-  r2 <- resistenciaTotal circ2
+resistenciaTotal :: Circ -> State -> Maybe Integer  -- se agrego el estado como argumento
+resistenciaTotal (Serie circ1 circ2) s = do
+  r1 <- resistenciaTotal circ1 s
+  r2 <- resistenciaTotal circ2 s
   return (r1 + r2)
-resistenciaTotal (Parallel circ1 circ2) = do
-  r1 <- resistenciaTotal circ1
-  r2 <- resistenciaTotal circ2
+resistenciaTotal (Parallel circ1 circ2) s = do
+  r1 <- resistenciaTotal circ1 s
+  r2 <- resistenciaTotal circ2 s
   guard ((r1 + r2) /= 0)  -- Agrego una guarda para evitar división por cero. Utilizo guard para verificar si la suma r1 + r2 es diferente de cero antes de realizar la división.
   return ((r1 * r2) `div` (r1 + r2))
-resistenciaTotal (Add p comp c) = Just (resistenciaComponente comp)
+resistenciaTotal (Add p comp c) s = Just (resistenciaComponente comp s)
 
 -- Defino la función auxiliar para obtener la resistencia de un componente
-resistenciaComponente :: Comp -> Integer
-resistenciaComponente (Resistance (Const v)) = v
-resistenciaComponente (Capacitance _) = 0
-resistenciaComponente (Source _) = 0
-resistenciaComponente (Switch _) = 0
-resistenciaComponente Voltmeter = 0
-resistenciaComponente Amperemeter = 0
-resistenciaComponente Ohmmeter = 0
-resistenciaComponente EmptyComp = 0
+resistenciaComponente :: Comp -> State -> Integer -- se agrego el estado como argumento
+resistenciaComponente (Resistance v) s = case valComp (Resistance v) s of
+                                                Right valor -> valor
+                                                Left error -> -1
+resistenciaComponente (Capacitance _) s = 0
+resistenciaComponente (Source _) s = 0
+resistenciaComponente (Switch _) s = 0
+resistenciaComponente Voltmeter s = 0
+resistenciaComponente Amperemeter s = 0
+resistenciaComponente Ohmmeter s = 0
+resistenciaComponente EmptyComp s = 0
 
 --Evalúo si se puede calcular la resistencia de un circuito y retorno un mensaje en consecuencia
 --msgRes::Maybe->String
@@ -534,28 +547,30 @@ msgRes rt= case rt of
 
 
 -- Defino la función para calcular la capacitancia de un circuito. Usamos tipo de dato Maybe para contemplar errores
-capacidadTotal :: Circ -> Maybe Integer
-capacidadTotal (Serie circ1 circ2) = do
-  c1 <- capacidadTotal circ1
-  c2 <- capacidadTotal circ2
+capacidadTotal :: Circ -> State -> Maybe Integer  -- se agrego el estado como argumento
+capacidadTotal (Serie circ1 circ2) s = do
+  c1 <- capacidadTotal circ1 s
+  c2 <- capacidadTotal circ2 s
   guard ((c1 + c2) /= 0)  -- Agrego una guarda para evitar división por cero.
   return ((c1 * c2) `div` (c1 + c2))
-capacidadTotal (Parallel circ1 circ2) = do
-  c1 <- capacidadTotal circ1
-  c2 <- capacidadTotal circ2
+capacidadTotal (Parallel circ1 circ2) s = do
+  c1 <- capacidadTotal circ1 s
+  c2 <- capacidadTotal circ2 s
   return (c1 + c2)
-capacidadTotal (Add p comp c) = Just (capacidadComponente comp)
+capacidadTotal (Add p comp c) s = Just (capacidadComponente comp s)
 
 -- Defino la función auxiliar para obtener la capacitancia de un componente
-capacidadComponente :: Comp -> Integer
-capacidadComponente (Capacitance (Const v)) = v
-capacidadComponente (Resistance _) = 0
-capacidadComponente (Source _) = 0
-capacidadComponente (Switch _) = 0
-capacidadComponente Voltmeter = 0
-capacidadComponente Amperemeter = 0
-capacidadComponente Ohmmeter = 0
-capacidadComponente EmptyComp = 0
+capacidadComponente :: Comp -> State -> Integer 
+capacidadComponente (Capacitance v) s = case valComp (Capacitance v) s of
+                                                Right valor -> valor
+                                                Left error -> -1
+capacidadComponente (Resistance _) s = 0
+capacidadComponente (Source _) s = 0
+capacidadComponente (Switch _) s = 0
+capacidadComponente Voltmeter s = 0
+capacidadComponente Amperemeter s = 0
+capacidadComponente Ohmmeter s = 0
+capacidadComponente EmptyComp s = 0
 
 --Evalúo si se puede calcular la capacitancia de un circuito y retorno un mensaje en consecuencia
 msgCap ct= case ct of 
@@ -566,8 +581,8 @@ msgCap ct= case ct of
 -- Calculo de la intensidad total del circuito.
 --Intensidad= Tensión/ resistencia
 --ampTotal :: Integer -> Circ -> Integer
-ampTotal v c = let rt = resistenciaTotal c 
-               in case rt of 
+ampTotal v c s = let rt = resistenciaTotal c s  -- se agrego state como argumento
+                 in case rt of 
                        Nothing -> Nothing
                        Just x -> Just (v `div` x)
 

@@ -1,2 +1,3 @@
-a:=1;
-(r,c,a):==serie (-source 12)(serie (+resistance a)(+resistance 4))
+res1:= 40;
+cap1:=60;
+(r,c,a):== serie (-source 12)(serie (+resistance res1)(+capacitance cap1))
