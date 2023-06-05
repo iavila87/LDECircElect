@@ -1,0 +1,2 @@
+a:=1;
+(r,c,a):==serie (-source 12)(serie (+resistance a)(+resistance 4))

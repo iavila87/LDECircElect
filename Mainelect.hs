@@ -34,7 +34,4 @@ run ifile =
         --writeFile "testdecreacion.tex" (snd ( evalComm (CircExpr (Parallel ( Serie (CompExpr (Voltmeter)) (CompExpr (Resistance (Const 12))) ) (CompExpr (Resistance (Const 12))) )) initState ) )  
         --writeFile "testdecreacion.tex" (snd ( evalComm (CircExpr (Parallel ((Parallel ((CompExpr (Resistance (Const 12))) ) (CompExpr (Switch BTrue)) ) ) ((Parallel ((CompExpr (Resistance (Const 12))) ) (CompExpr (Switch BTrue)) ) ) )) initState ) )
         --writeFile "testdecreacion.tex" (snd ( evalComm (CircExpr (Serie (CompExpr (Source (Const 12))) (CompExpr (Switch BFalse)) )) initState ) )
-        ----putStrLn $ "se creo el documento."
-        -- ejecuta un comando de sistema
-        ----system "pdflatex circuitoutput.tex" >>= \exitCode -> print exitCode
-        ----system "circuitoutput.pdf" >>= \exitCode -> print exitCode
+
