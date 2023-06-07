@@ -36,7 +36,10 @@ update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
                                              else ((x,y): fst (update var valor (xs,sc)),sc)
 -- Evalúa un programa en el estado nulo
 eval :: Comm -> State
-eval p = evalComm p initState
+eval p = let s= evalComm p initState
+         in case s of 
+                   Right s' -> Right (updateCirc(endCirc ++ endDoc) s')
+                   Left error -> Left error
 
 -- Devuelve el contenido de un Right
 unRight (Right x) = x
@@ -124,7 +127,7 @@ evalCirc c s =    let xIni  = lookfor "coordX" s
                       atotal = msgAmpere (ampTotal (findSource c) c s1)
                       -- Actualizo y cierro la seccion de circuito de LATEX
                   in case s1 of  
-                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ endDoc) s)
+                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ rtotal ++ captotal ++ atotal) s)
                           Left error -> Left error
 
 --unRight para tipo de dato String
