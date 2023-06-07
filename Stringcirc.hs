@@ -5,7 +5,7 @@ type StateCirc = String
 
 ------ Estado nulo para prueba de circuito
 initStateCirc :: StateCirc
-initStateCirc = usePackCirc1 ++ usePackCirc2 ++ usePackCirc3 ++ titAuthCirc ++ beginCirc
+initStateCirc = usePackCirc1 ++ usePackCirc2 ++ usePackCirc3 ++ titAuthCirc ++ beginDoc
 
 
 usePackCirc1 :: StateCirc
@@ -20,14 +20,17 @@ usePackCirc3 = "\\usepackage{lmodern}\n\\usepackage[T1]{fontenc}\n\\usepackage[s
 titAuthCirc :: StateCirc
 titAuthCirc = "\\title{Circuito resultante}\n\\author{Avila - Torrazza}\n"
 
+beginDoc :: StateCirc
+beginDoc = "\\begin{document}\n\\maketitle\n% Mi primer documento en \\LaTeX{}.\n"
+
 beginCirc :: StateCirc
-beginCirc = "\\begin{document}\n\\maketitle\n% Mi primer documento en \\LaTeX{}.\n\\begin{circuitikz}[american]\n"
+beginCirc = "\\begin{circuitikz}[american]\n"
                  
 endCirc :: StateCirc
 endCirc = "\\end{circuitikz}\n"
 
+endDoc :: StateCirc
 endDoc = "\\end{document}\n"
-
 
 gndCirc :: StateCirc
 gndCirc = " node[ground](GND){} "

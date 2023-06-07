@@ -38,7 +38,7 @@ update var valor ((x,y):xs,sc) = if var == x then ((var,valor):xs,sc)
 eval :: Comm -> State
 eval p = let s= evalComm p initState
          in case s of 
-                   Right s' -> Right (updateCirc(endCirc ++ endDoc) s')
+                   Right s' -> Right (updateCirc endDoc s')
                    Left error -> Left error
 
 -- Devuelve el contenido de un Right
@@ -85,9 +85,12 @@ evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 
 
 --evalCirc con errores
-evalCirc c s =    let xIni  = lookfor "coordX" s
-                      yIni  = lookfor "coordY" s
-                      s1 = evalComm' c s
+evalCirc c s =    let s'' = case s of
+                                Right s' -> Right (updateCirc beginCirc s')
+                                Left error -> Left error
+                      xIni  = lookfor "coordX" s''
+                      yIni  = lookfor "coordY" s''
+                      s1 = evalComm' c s''
                       -- Valores de coordenadas luego de evalComm'
                       xFinEval = lookfor "coordX" s1
                       yFinEval = lookfor "coordY" s1
@@ -135,7 +138,7 @@ evalCirc c s =    let xIni  = lookfor "coordX" s
                                                         Left error -> Left error
                                 Left error -> Left error
                   in case s3 of  
-                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ rtotal ++ captotal ++ atotal) s)
+                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ "\\\\\\\\") s)
                           Left error -> Left error
 
 --unRight para tipo de dato String
