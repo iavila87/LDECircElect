@@ -126,7 +126,13 @@ evalCirc c s =    let xIni  = lookfor "coordX" s
                       -- Cálculo del amperaje del circuito y armado del String
                       atotal = msgAmpere (ampTotal (findSource c) c s1)
                       -- Actualizo y cierro la seccion de circuito de LATEX
-                  in case s1 of  
+                      s2= case s1 of
+                               Right s1'-> Right (update "coordX" 0 s1')
+                               Left error -> Left error
+                      s3 = case s2 of
+                                Right s2' -> Right (update "coordY" (yFinEval-2) s2')
+                                Left error -> Left error
+                  in case s3 of  
                           Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ rtotal ++ captotal ++ atotal) s)
                           Left error -> Left error
 
