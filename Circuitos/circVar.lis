@@ -1,3 +1,19 @@
 res1:= 40;
-cap1:=60;
-(r,c,a):== serie (-source 12)(serie (+resistance res1)(+capacitance cap1))
+cap1:=10;
+volt:= 24;
+n:= 0;
+
+if (volt > 9) then
+    res1:= 500;
+    res2:= 100
+else
+    res1:= 150;
+    res2:=100
+end;
+
+repeat
+	res1 := res1 + res1;
+    (r,c,a):== serie (-source volt)(serie (+resistance res1)(serie (+resistance res2)(+capacitance cap1)));
+	n := n + 1
+until n = 2
+end

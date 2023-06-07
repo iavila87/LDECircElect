@@ -224,7 +224,8 @@ evalComm' c s = case c of
                                                 Left error -> Left error
                     
                     -- Empiezo a dibujar los componentes
-                    Add pol (Source (Const n)) c -> if componentNegValue (Source (Const n)) then Left NegativeValue 
+                    -- Add pol (Source (Const v)) c -> if componentNegValue (Source (Const v)) then Left NegativeValue 
+                    Add pol (Source v) c ->         if componentNegValue (Source v) then Left NegativeValue
                                                     else let    x  = lookfor "coordX" s
                                                                 y  = lookfor "coordY" s
                                                                 s1 = case x of
@@ -236,10 +237,16 @@ evalComm' c s = case c of
                                                                         Right n -> case s1 of
                                                                                         Right s1' -> Right (update "coordY" n s1')
                                                                         Left error -> Left error
+                                                                
+                                                                -- Extrae el valor de un componente
+                                                                intcomp = valComp (Source v) s2
+
                                                                 --Actualizo el estado para el próximo componente pero no cambio coordenadas del actual
                                                                 str1 =  case x of 
                                                                             Right x1-> case y of
-                                                                                            Right y1-> Right (drawSource x1 y1 n pol)
+                                                                                            Right y1-> case intcomp of
+                                                                                                                Right v' -> Right (drawSource x1 y1 v' pol)
+                                                                                                                Left error -> Left error
                                                                                             Left error -> Left error
                                                                             Left error -> Left error
                                                                 str2 = case x of 
@@ -364,6 +371,7 @@ evalComm' c s = case c of
 valComp comp s = case comp of
                         Resistance v -> evalIntExp v s
                         Capacitance v -> evalIntExp v s
+                        Source v -> evalIntExp v s
 
 -- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
