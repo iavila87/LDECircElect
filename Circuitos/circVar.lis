@@ -13,7 +13,7 @@ end;
 
 repeat
 	res1 := res1 + res1;
-    (r,c,a):== serie (-source volt)(serie (+resistance res1)(serie (+resistance res2)(+capacitance cap1)));
+    (r,c,a):== serie (-source vol)(serie (+resistance res1)(serie (+resistance res2)(+capacitance cap1)));
 	n := n + 1
-until n = 2
+until n = 3
 end

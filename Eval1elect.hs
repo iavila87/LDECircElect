@@ -88,12 +88,20 @@ evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 evalCirc c s =    let s'' = case s of
                                 Right s' -> Right (updateCirc beginCirc s')
                                 Left error -> Left error
-                      xIni  = lookfor "coordX" s''
-                      yIni  = lookfor "coordY" s''
+                      xIni  = case s'' of
+                                 Right s''' -> lookfor "coordX" s''
+                                 Left error -> Left error
+                      yIni  = case s'' of
+                                 Right s''' -> lookfor "coordY" s''
+                                 Left error -> Left error
                       s1 = evalComm' c s''
                       -- Valores de coordenadas luego de evalComm'
-                      xFinEval = lookfor "coordX" s1
-                      yFinEval = lookfor "coordY" s1
+                      xFinEval = case s1 of
+                                    Right s1' -> lookfor "coordX" s1
+                                    Left error -> Left error
+                      yFinEval = case s1 of
+                                    Right s1' -> lookfor "coordY" s1
+                                    Left error -> Left error
                       -- Cierre de circuito con el dibujo de GND
                       str1 = case xFinEval of
                                 Right n0 -> case yIni of
@@ -190,8 +198,12 @@ evalComm' c s = case c of
 
                                           -- Evaluación de c2
                                           s6 = evalComm' c2 s5
-                                          xFinEvalC2  = lookfor "coordX" s6
-                                          yFinEvalC2  = lookfor "coordY" s6
+                                          xFinEvalC2  = case s6 of
+                                                           Right s6' -> lookfor "coordX" s6
+                                                           Left error -> Left error
+                                          yFinEvalC2  = case s6 of
+                                                           Right s6' -> lookfor "coordY" s6
+                                                           Left error -> Left error
                                           -- Linea horizontal en la linea de c2
                                           str4 = case xIni of
                                                         Right xInitial ->case yFinEvalC1 of
@@ -240,8 +252,12 @@ evalComm' c s = case c of
                     -- Empiezo a dibujar los componentes
                     -- Add pol (Source (Const v)) c -> if componentNegValue (Source (Const v)) then Left NegativeValue 
                     Add pol (Source v) c ->         if componentNegValue (Source v) then Left NegativeValue
-                                                    else let    x  = lookfor "coordX" s
-                                                                y  = lookfor "coordY" s
+                                                    else let    x  = case s of
+                                                                        Right s' -> lookfor "coordX" s
+                                                                        Left error -> Left error
+                                                                y  = case s of
+                                                                        Right s' -> lookfor "coordY" s
+                                                                        Left error -> Left error
                                                                 s1 = case x of
                                                                             Right n -> case s of
                                                                                          Right s' -> Right (update "coordX" (n+2) s')
@@ -277,11 +293,20 @@ evalComm' c s = case c of
                                                                 
                                                                 -- Actualizo el string de latex
                                                             in  case s2 of
-                                                                        Right s2' -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3) s2')
-                                                                        Left error -> Left error
+                                                                  Right s2' -> case str1 of
+                                                                                 Right st1 -> case str2 of
+                                                                                                 Right st2 -> case str3 of
+                                                                                                                 Right st3 -> Right (updateCirc (st1 ++ st2 ++ st3) s2')
+                                                                                                 Left error -> Left error
+                                                                                 Left error -> Left error
+                                                                  Left error -> Left error
 
-                    Add pol Voltmeter c ->  let x  = lookfor "coordX" s
-                                                y  = lookfor "coordY" s
+                    Add pol Voltmeter c ->  let x  = case s of
+                                                        Right s' -> lookfor "coordX" s
+                                                        Left error -> Left error
+                                                y  = case s of
+                                                        Right s' -> lookfor "coordY" s
+                                                        Left error -> Left error
                                                 s1 = case x of 
                                                         Right n-> Right (update "coordX" (n+2) (unRight s))
                                                         Left error -> Left error
@@ -310,8 +335,12 @@ evalComm' c s = case c of
                                             
                                             in  Right (updateCirc ( uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
 
-                    Add pol Amperemeter c ->    let x  = lookfor "coordX" s
-                                                    y  = lookfor "coordY" s
+                    Add pol Amperemeter c ->    let x  = case s of
+                                                            Right s' -> lookfor "coordX" s
+                                                            Left error -> Left error
+                                                    y  = case s of
+                                                            Right s' -> lookfor "coordY" s
+                                                            Left error -> Left error
                                                     -- Actualizo coordenadas para dibujar el próximo componente
                                                     s1 = case x of 
                                                             Right n -> Right (update "coordX" (n+2) (unRight s))
@@ -329,8 +358,12 @@ evalComm' c s = case c of
                                                 in  Right (updateCirc (uRs str1) (unRight s2))
 
                     -- componente vacio (linea)
-                    Add pol EmptyComp c ->  let x  = lookfor "coordX" s
-                                                y  = lookfor "coordY" s
+                    Add pol EmptyComp c ->  let x  = case s of
+                                                        Right s' -> lookfor "coordX" s
+                                                        Left error -> Left error
+                                                y  = case s of
+                                                        Right s' -> lookfor "coordY" s
+                                                        Left error -> Left error
                                                 -- Actualizo
                                                 s1 = case x of
                                                         Right x' -> Right (update "coordX" (x'+2) (unRight s))
@@ -445,7 +478,9 @@ drawComponent x y c pol val = case pol of
 -- Evalúa una expresión entera
 evalIntExp :: IntExp -> State -> Either Error Integer
 evalIntExp (Const valor) estado = Right valor
-evalIntExp (Var variable) estado = lookfor variable estado
+evalIntExp (Var variable) estado = case estado of
+                                      Right e -> lookfor variable estado
+                                      Left error -> Left error
 evalIntExp (UMinus expInt) estado = let valor = evalIntExp expInt estado
                                     in case valor of
                                         Right n -> Right (-n)
