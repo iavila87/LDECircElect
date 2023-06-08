@@ -145,9 +145,17 @@ evalCirc c s =    let s'' = case s of
                                                         Right y -> Right (update "coordY" (y-4) s2')
                                                         Left error -> Left error
                                 Left error -> Left error
-                  in case s3 of  
-                          Right s -> Right (updateCirc (uRs str1 ++ uRs str2 ++ uRs str3 ++ uRs str4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ "\\\\\\\\") s)
-                          Left error -> Left error
+                  in case s3 of 
+                        Right s -> case str1 of
+                                      Right t1 -> case str2 of
+                                                     Right t2 -> case str3 of
+                                                                    Right t3 -> case str4 of
+                                                                                   Right t4 -> Right (updateCirc (t1 ++ t2 ++ t3 ++ t4 ++ endCirc ++ rtotal ++ captotal ++ atotal ++ "\\\\\\\\") s)
+                                                                                   Left error -> Left error
+                                                                    Left error -> Left error
+                                                     Left error -> Left error
+                                      Left error -> Left error 
+                        Left error -> Left error
 
 --unRight para tipo de dato String
 uRs (Right s) = s
@@ -241,16 +249,27 @@ evalComm' c s = case c of
                                         
                                           -- Comparando coordenadas según longitud del paralelo.
                                       in case xFinEvalC1 of
-                                                Right c1 -> case xFinEvalC2 of
-                                                                    Right c2 -> if (c1 > c2) then
-                                                                                    Right (updateCirc (uRs str3 ++ uRs str4 ++ uRs str5 ++ uRs str6 ++ uRs str7a) (unRight s6))
-                                                                                else
-                                                                                    Right (updateCirc (uRs str3 ++ uRs str4 ++ uRs str5 ++ uRs str6 ++ uRs str7b) (unRight s6)) 
-                                                                    Left error -> Left error
-                                                Left error -> Left error
+                                           Right c1 -> case xFinEvalC2 of
+                                                         Right c2 -> case str3 of
+                                                                       Right t3 -> case str4 of
+                                                                                     Right t4 -> case str5 of
+                                                                                                   Right t5 -> case str6 of
+                                                                                                                 Right t6 -> case str7a of
+                                                                                                                               Right t7a -> case str7b of
+                                                                                                                                              Right t7b -> if (c1 > c2) then
+                                                                                                                                                              Right (updateCirc (t3 ++ t4 ++ t5 ++ t6 ++ t7a) (unRight s6))
+                                                                                                                                                           else
+                                                                                                                                                              Right (updateCirc (t3 ++ t4 ++ t5 ++ t6 ++ t7b) (unRight s6))
+                                                                                                                                              Left error -> Left error
+                                                                                                                               Left error -> Left error
+                                                                                                                 Left error -> Left error
+                                                                                                   Left error -> Left error
+                                                                                     Left error -> Left error
+                                                                       Left error -> Left error
+                                                         Left error -> Left error
+                                           Left error -> Left error
                     
                     -- Empiezo a dibujar los componentes
-                    -- Add pol (Source (Const v)) c -> if componentNegValue (Source (Const v)) then Left NegativeValue 
                     Add pol (Source v) c ->         if componentNegValue (Source v) then Left NegativeValue
                                                     else let    x  = case s of
                                                                         Right s' -> lookfor "coordX" s
@@ -301,6 +320,41 @@ evalComm' c s = case c of
                                                                                  Left error -> Left error
                                                                   Left error -> Left error
 
+                    Add pol (Switch v) c ->  let x  = case s of
+                                                        Right s' -> lookfor "coordX" s  
+                                                        Left error -> Left error
+                                                 y  = case s of
+                                                        Right s' -> lookfor "coordY" s 
+                                                        Left error -> Left error
+                                                 s1 = case s of
+                                                        Right s' -> case x of
+                                                                        Right n -> Right (update "coordX" (n+2) s')
+                                                                        Left error -> Left error
+                                                        Left error -> Left error
+                                                 s2 = case s1 of
+                                                        Right s1' -> case y of 
+                                                                        Right n -> Right (update "coordY" n s1')
+                                                                        Left error -> Left error
+                                                        Left error -> Left error
+                                                 
+                                                 -- Extrae el bool de un componente
+                                                 boolcomp = boolComp (Switch v) s2
+
+                                                 --Dibujo componente desde coordenadas iniciales
+                                                 str1 = case x of
+                                                             Right x1 -> case y of
+                                                                              Right y1 -> case boolcomp of
+                                                                                                Right val -> Right (drawSwitch x1 y1 pol val)
+                                                                                                Left error -> Left error
+                                                                              Left error -> Left error
+                                                             Left error -> Left error
+                                             --Actualizo String de Latex
+                                             in case s2 of
+                                                        Right s2' -> case str1 of
+                                                                       Right t1 -> Right (updateCirc t1 s2')
+                                                                       Left error -> Left error
+                                                        Left error -> Left error
+
                     Add pol Voltmeter c ->  let x  = case s of
                                                         Right s' -> lookfor "coordX" s
                                                         Left error -> Left error
@@ -333,7 +387,13 @@ evalComm' c s = case c of
                                                                            Left error -> Left error
                                                            Left error -> Left error
                                             
-                                            in  Right (updateCirc ( uRs str1 ++ uRs str2 ++ uRs str3) (unRight s2))
+                                            in case str1 of
+                                                 Right t1 -> case str2 of
+                                                               Right t2 -> case str3 of
+                                                                             Right t3 -> Right (updateCirc (t1 ++ t2 ++ t3) (unRight s2))
+                                                                             Left error -> Left error
+                                                               Left error -> Left error
+                                                 Left error -> Left error
 
                     Add pol Amperemeter c ->    let x  = case s of
                                                             Right s' -> lookfor "coordX" s
@@ -355,7 +415,9 @@ evalComm' c s = case c of
                                                                             Left error -> Left error
                                                             Left error -> Left error
                                                     --Actualizo string de Latex
-                                                in  Right (updateCirc (uRs str1) (unRight s2))
+                                                in  case str1 of
+                                                      Right t1 -> Right (updateCirc t1 (unRight s2))
+                                                      Left error -> Left error
 
                     -- componente vacio (linea)
                     Add pol EmptyComp c ->  let x  = case s of
@@ -378,7 +440,9 @@ evalComm' c s = case c of
                                                                           Left error -> Left error
                                                           Left error -> Left error
                                                 --Actualizo string de Latex
-                                            in  Right (updateCirc (uRs str1) (unRight s2))
+                                            in case str1 of
+                                                 Right t1 -> Right (updateCirc t1 (unRight s2))
+                                                 Left error -> Left error
 
                     Add pol c1 c ->     if componentNegValue c1 then Left NegativeValue
                                         else let x  = case s of
@@ -411,7 +475,9 @@ evalComm' c s = case c of
                                                              Left error -> Left error
                                              --Actualizo String de Latex
                                              in case s2 of
-                                                        Right s2' -> Right (updateCirc (uRs str1) s2')
+                                                        Right s2' -> case str1 of
+                                                                       Right t1 -> Right (updateCirc t1 s2')
+                                                                       Left error -> Left error
                                                         Left error -> Left error
 
 -- Función que retorna el valor contenido en un componente
@@ -419,6 +485,9 @@ valComp comp s = case comp of
                         Resistance v -> evalIntExp v s
                         Capacitance v -> evalIntExp v s
                         Source v -> evalIntExp v s
+
+boolComp comp s = case comp of
+                        Switch v -> evalBoolExp v s
 
 -- Función que retorna un string para dibujar una linea en Latex
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
@@ -469,6 +538,12 @@ drawVoltimeter x y pol = case pol of
 drawAmperemeter x y pol = case pol of
                             Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Amperemeter 0) ++ (strCoord (x+2) y) ++ ";\n"
                             Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp Amperemeter 0) ++ (strCoord x y) ++ ";\n"
+
+drawSwitch x y pol val = case pol of
+                                Pos -> if val then "\\draw" ++ (strCoord x y) ++ (strComp (Switch BTrue) 1) ++ (strCoord (x+2) y) ++ ";\n"
+                                       else "\\draw" ++ (strCoord x y) ++ (strComp (Switch BFalse) 0) ++ (strCoord (x+2) y) ++ ";\n"
+                                Neg -> if val then "\\draw" ++ (strCoord (x+2) y) ++ (strComp (Switch BTrue) 1) ++ (strCoord x y) ++ ";\n"
+                                       else "\\draw" ++ (strCoord (x+2) y) ++ (strComp (Switch BFalse) 0) ++ (strCoord x y) ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja el Componente
 drawComponent x y c pol val = case pol of
