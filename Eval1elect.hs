@@ -85,6 +85,7 @@ evalComm (Repeat c b) s = evalComm (Seq c (Cond b Skip (Repeat c b))) s
 
 
 --evalCirc con errores
+evalCirc :: Circ -> State -> State
 evalCirc c s =    let s'' = case s of
                                 Right s' -> Right (updateCirc beginCirc s')
                                 Left error -> Left error
@@ -481,20 +482,23 @@ evalComm' c s = case c of
                                                         Left error -> Left error
 
 -- Función que retorna el valor contenido en un componente
+valComp :: Comp -> State -> Either Error Integer
 valComp comp s = case comp of
                         Resistance v -> evalIntExp v s
                         Capacitance v -> evalIntExp v s
                         Source v -> evalIntExp v s
 
+boolComp :: Comp -> State -> Either Error Bool
 boolComp comp s = case comp of
                         Switch v -> evalBoolExp v s
 
 -- Función que retorna un string para dibujar una linea en Latex
+strLine :: [Char] -> [Char] -> [Char]
 strLine coord1 coord2 = "\\draw" ++ coord1 ++ lineCirc ++ coord2 ++ ";\n"
 
 -- Función que devuelve el mayor
-isX1Mayor :: Ord a => a -> a -> Bool
-isX1Mayor n m = if n < m then False else True
+--isX1Mayor :: Ord a => a -> a -> Bool
+--isX1Mayor n m = if n < m then False else True
 --
 cnv :: Show a => a -> String
 cnv n = show n
@@ -521,24 +525,27 @@ strComp (Switch BFalse) v = "to[cosw, -, name=s1]"
 strComp (Source (Const r)) v = "to[battery1={" ++ (show r) ++ "}{V}]"
 
 --Función para devolver concatenado el string que dibuja en GND
+drawGND :: (Show a1, Show a2) => a1 -> a2 -> [Char]
 drawGND x y = "\\draw" ++ (strCoord x y) ++ gndCirc ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja la Source
+drawSource :: (Show a1, Show a2, Num a2) => a1 -> a2 -> Integer -> Pol -> [Char]
 drawSource x y n pol = case pol of
                           Pos -> "\\draw" ++ (strCoord x y) ++ (strComp (Source (Const n)) 0) ++ (strCoord x (y-2)) ++ ";\n"
                           Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp (Source (Const n)) 0) ++ (strCoord x y) ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja el Voltímetro
-
+drawVoltimeter :: (Show a1, Show a2, Num a2) => a1 -> a2 -> Pol -> [Char]
 drawVoltimeter x y pol = case pol of
                             Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Voltmeter 0) ++ (strCoord x (y-2)) ++ ";\n"
                             Neg -> "\\draw" ++ (strCoord x (y-2)) ++ (strComp Voltmeter 0) ++ (strCoord x y) ++ ";\n"
 --Función para devolver concatenado el string que dibuja el Amperímetro
-  
+drawAmperemeter :: (Show a1, Show a2, Num a1) => a1 -> a2 -> Pol -> [Char]
 drawAmperemeter x y pol = case pol of
                             Pos -> "\\draw" ++ (strCoord x y) ++ (strComp Amperemeter 0) ++ (strCoord (x+2) y) ++ ";\n"
                             Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp Amperemeter 0) ++ (strCoord x y) ++ ";\n"
 
+drawSwitch :: (Show a1, Show a2, Num a1) => a1 -> a2 -> Pol -> Bool -> [Char]
 drawSwitch x y pol val = case pol of
                                 Pos -> if val then "\\draw" ++ (strCoord x y) ++ (strComp (Switch BTrue) 1) ++ (strCoord (x+2) y) ++ ";\n"
                                        else "\\draw" ++ (strCoord x y) ++ (strComp (Switch BFalse) 0) ++ (strCoord (x+2) y) ++ ";\n"
@@ -546,6 +553,7 @@ drawSwitch x y pol val = case pol of
                                        else "\\draw" ++ (strCoord (x+2) y) ++ (strComp (Switch BFalse) 0) ++ (strCoord x y) ++ ";\n"
 
 --Función para devolver concatenado el string que dibuja el Componente
+drawComponent :: (Show a1, Show a2, Num a1) => a1 -> a2 -> Comp -> Pol -> Integer -> [Char]
 drawComponent x y c pol val = case pol of
                                 Pos -> "\\draw" ++ (strCoord x y) ++ (strComp c val) ++ (strCoord (x+2) y) ++ ";\n"
                                 Neg -> "\\draw" ++ (strCoord (x+2) y) ++ (strComp c val) ++ (strCoord x y) ++ ";\n"
